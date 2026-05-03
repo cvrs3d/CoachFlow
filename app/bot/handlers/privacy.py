@@ -3,6 +3,8 @@ from aiogram.types import CallbackQuery
 
 from app.services.users import activate_user_after_consent
 
+from app.bot.keyboards.main_menu import client_main_menu
+
 router = Router()
 
 
@@ -21,6 +23,11 @@ async def accept_privacy_handler(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         "Регистрация завершена.\n\n"
         "Теперь вы можете пользоваться ботом."
+    )
+
+    await callback.message.answer(
+        "Главное меню клиента:",
+        reply_markup=client_main_menu(),
     )
 
 
