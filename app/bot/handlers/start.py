@@ -11,6 +11,8 @@ from aiogram.fsm.context import FSMContext
 
 from app.bot.states.registration import RegistrationStates
 
+from app.bot.keyboards.main_menu import coach_main_menu, client_main_menu
+
 router = Router()
 
 
@@ -22,21 +24,19 @@ async def start_handler(
 ) -> None:
     current = await get_current_user_by_telegram_id(message.from_user.id)
 
-    # 1. Тренер без invite не должен видеть "нужна ссылка от тренера"
+    # 1. Trainer panel
     if current and current.coach and current.user.status == "active":
         await message.answer(
-            "Панель тренера.\n\n"
-            "Доступные команды:\n"
-            "/invite — создать ссылку приглашения\n"
-            "/health — проверить работу бота"
+            "Панель тренера.",
+            reply_markup=coach_main_menu(),
         )
         return
 
-    # 2. Уже активный клиент
+    # 2. Active clients panel
     if current and current.client and current.user.status == "active":
         await message.answer(
-            "Вы уже зарегистрированы.\n\n"
-            "Скоро здесь будет меню клиента."
+            "Вы уже зарегистрированы.",
+            reply_markup=client_main_menu(),
         )
         return
 
