@@ -207,13 +207,12 @@ async def redeem_invite_code(
                 client = Client(
                     id=str(uuid.uuid4()),
                     user_id=user.id,
-                    name=username,
+                    display_name=username,
                     status="pending",
                 )
                 session.add(client)
                 await session.flush()
             else:
-                client.name = username or client.name
                 client.status = "pending"
                 await session.flush()
 
