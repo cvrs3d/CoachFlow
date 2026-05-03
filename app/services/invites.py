@@ -186,37 +186,43 @@ async def redeem_invite_code(
                 user = existing_user
                 user.username = username
                 user.role = "client"
-                user.status = "active"
+                user.status = "pending"
                 await session.flush()
 
             # 4. Создаем client.
-            client = Client(
-                id=str(uuid.uuid4()),
-                user_id=user.id,
-                name=username,
-                status="active",
-            )
-            session.add(client)
-            await session.flush()
+            if client is None:
+                client = Client(
+                    id=str(uuid.uuid4()),
+                    user_id=user.id,
+                    name=username,
+                    status="pending",
+                )
+                session.add(client)
+                await session.flush()
+            else:
+                client.name = username or client.name
+                client.status = "pending"
+                await session.flush()
 
             # 5. Связываем client ↔ coach.
-            relation = ClientCoachRelation(
-                id=str(uuid.uuid4()),
-                client_id=client.id,
-                coach_id=coach_id,
-                status="active",
+            relation_result = await session.execute(
+                select(ClientCoachRelation)
+                .where(ClientCoachRelation.client_id == client.id)
+                .where(ClientCoachRelation.coach_id == coach_id)
             )
-            session.add(relation)
+            relation = relation_result.scalar_one_or_none()
 
-            await safe_commit(session)
-
-            return RedeemInviteResult(
-                ok=True,
-                user_id=user.id,
-                client_id=client.id,
-                coach_id=coach_id,
-            )
-
+            if relation is None:
+                relation = ClientCoachRelation(
+                    id=str(uuid.uuid4()),
+                    client_id=client.id,
+                    coach_id=coach_id,
+                    status="active",
+                )
+                session.add(relation)
+            else:
+                relation.status = "active"
+                
         except Exception:
             await session.rollback()
             raise
