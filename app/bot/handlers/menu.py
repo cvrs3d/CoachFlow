@@ -30,18 +30,6 @@ async def create_invite_button_handler(message: Message) -> None:
     )
 
 
-@router.message(F.text == "📅 Расписание")
-async def coach_schedule_handler(message: Message) -> None:
-    current = await get_current_user_by_telegram_id(message.from_user.id)
-
-    if not current or not current.coach or current.user.status != "active":
-        return
-
-    await message.answer(
-        "Раздел расписания пока в разработке.\n\n"
-        "Следующий шаг: добавим создание свободных окон тренера."
-    )
-
 
 @router.message(F.text == "👥 Клиенты")
 async def coach_clients_handler(message: Message) -> None:
