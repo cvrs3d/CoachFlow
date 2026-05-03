@@ -4,7 +4,7 @@ import logging
 from aiogram import Bot, Dispatcher
 
 from app.core.config import settings
-from app.bot.handlers import start, coach, client, invites
+from app.bot.handlers import start, coach, client, invites, privacy
 from app.services.bot_commands import setup_coach_commands, setup_default_commands
 from app.core.logging import setup_logging
 
@@ -19,8 +19,7 @@ async def main() -> None:
     dp = Dispatcher()
 
     dp.include_router(start.router)
-    #dp.include_router(coach.router)
-    #dp.include_router(client.router)
+    dp.include_router(privacy.router)
     dp.include_router(invites.router)
 
 

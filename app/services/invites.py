@@ -134,13 +134,21 @@ async def redeem_invite_code(
             )
             existing_user = existing_user_result.scalar_one_or_none()
 
-            if existing_user is not None and existing_user.status == "active":
-                await session.rollback()
-                return RedeemInviteResult(
-                    ok=False,
-                    reason="already_registered",
-                    user_id=existing_user.id,
-                )
+            if existing_user is not None:
+                if existing_user.status == "active":
+                    await session.rollback()
+                    return RedeemInviteResult(
+                        ok=False,
+                        reason="already_registered",
+                        user_id=existing_user.id,
+                    )
+                if existing_user.status == "pending":
+                    await session.rollback()
+                    return RedeemInviteResult(
+                        ok=False,
+                        reason="pending_consent",
+                        user_id=existing_user.id,
+                    )
 
             # 2. Атомарно занимаем invite.
             # SQLite поддерживает RETURNING для UPDATE.
@@ -222,7 +230,7 @@ async def redeem_invite_code(
                 session.add(relation)
             else:
                 relation.status = "active"
-                
+
         except Exception:
             await session.rollback()
             raise
