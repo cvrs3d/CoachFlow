@@ -6,9 +6,14 @@ from aiogram import Bot, Dispatcher
 from app.core.config import settings
 from app.bot.handlers import start, coach, client, invites
 from app.services.bot_commands import setup_coach_commands, setup_default_commands
+from app.core.logging import setup_logging
+
+logger = logging.getLogger(__name__)
 
 async def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    setup_logging(debug=True)
+
+    logger.info("Starting Bot")
 
     bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
@@ -27,4 +32,10 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.getLogger(__name__).info("Bot stopped by user")
+    except Exception:
+        logging.getLogger(__name__).exception("Unhandled application error")
+        raise
