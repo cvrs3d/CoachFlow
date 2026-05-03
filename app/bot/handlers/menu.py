@@ -51,18 +51,6 @@ async def coach_food_reports_handler(message: Message) -> None:
     await message.answer("Раздел отчетов еды пока в разработке.")
 
 
-@router.message(F.text == "📅 Выбрать время")
-async def client_booking_handler(message: Message) -> None:
-    current = await get_current_user_by_telegram_id(message.from_user.id)
-
-    if not current or not current.client or current.user.status != "active":
-        return
-
-    await message.answer(
-        "Выбор времени пока в разработке.\n\n"
-        "Скоро здесь будут доступные окна тренера."
-    )
-
 
 @router.message(F.text == "🍽 Отправить фото еды")
 async def client_food_photo_handler(message: Message) -> None:
