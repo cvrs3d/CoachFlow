@@ -11,7 +11,7 @@ from app.core.logging import setup_logging
 logger = logging.getLogger(__name__)
 
 async def main() -> None:
-    setup_logging(debug=True)
+    setup_logging(debug=False)
 
     logger.info("Starting Bot")
 

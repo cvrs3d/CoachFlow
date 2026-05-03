@@ -60,7 +60,7 @@ class Client(Base):
     user = relationship("User")
 
     __table_args__ = (
-        CheckConstraint("status IN ('active', 'inactive', 'blocked')", name="ck_clients_status"),
+        CheckConstraint("status IN ('pending', 'active', 'inactive', 'blocked')", name="ck_clients_status"),
     )
 
 
