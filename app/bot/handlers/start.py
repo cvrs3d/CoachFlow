@@ -7,11 +7,19 @@ from app.bot.keyboards.privacy import privacy_consent_keyboard
 from app.services.invites import redeem_invite_code
 from app.services.users import get_current_user_by_telegram_id
 
+from aiogram.fsm.context import FSMContext
+
+from app.bot.states.registration import RegistrationStates
+
 router = Router()
 
 
 @router.message(CommandStart())
-async def start_handler(message: Message, command: CommandObject) -> None:
+async def start_handler(
+    message: Message,
+    command: CommandObject,
+    state: FSMContext,
+) -> None:
     current = await get_current_user_by_telegram_id(message.from_user.id)
 
     # 1. Тренер без invite не должен видеть "нужна ссылка от тренера"
@@ -34,10 +42,18 @@ async def start_handler(message: Message, command: CommandObject) -> None:
 
     # 3. Pending клиент без нового invite — повторно показываем consent
     if current and current.client and current.user.status == "pending":
+        if not current.client.display_name:
+            await state.set_state(RegistrationStates.waiting_for_display_name)
+            await message.answer(
+                "Регистрация уже начата.\n\n"
+                "Как вас записать для тренера?"
+            )
+            return
+
         await message.answer(
             "Для завершения регистрации нужно согласие на обработку данных.\n\n"
-            "Мы будем обрабатывать ваш Telegram ID, имя, записи к тренеру, "
-            "сообщения и фото еды, которые вы отправляете в бот.\n\n"
+            "Мы будем обрабатывать ваш Telegram ID, рабочее имя клиента, "
+            "записи к тренеру, сообщения и фото еды, которые вы отправляете в бот.\n\n"
             "Данные используются только для работы сервиса тренера.",
             reply_markup=privacy_consent_keyboard(),
         )
@@ -60,13 +76,12 @@ async def start_handler(message: Message, command: CommandObject) -> None:
     )
 
     if result.ok:
+        await state.set_state(RegistrationStates.waiting_for_display_name)
+
         await message.answer(
             "Ссылка приглашения подтверждена.\n\n"
-            "Для завершения регистрации нужно согласие на обработку данных.\n\n"
-            "Мы будем обрабатывать ваш Telegram ID, имя, записи к тренеру, "
-            "сообщения и фото еды, которые вы отправляете в бот.\n\n"
-            "Данные используются только для работы сервиса тренера.",
-            reply_markup=privacy_consent_keyboard(),
+            "Как вас записать для тренера?\n\n"
+            "Введите имя, которое будет видно тренеру. Например: Алексей."
         )
         return
 
