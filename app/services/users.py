@@ -58,6 +58,9 @@ async def activate_user_after_consent(telegram_id: int) -> bool:
         if client is None:
             return False
 
+        if not client.display_name:
+            return False
+
         existing_consent_result = await session.execute(
             select(Consent)
             .where(Consent.user_id == user.id)
