@@ -23,10 +23,11 @@ async def main() -> None:
     #dp.include_router(client.router)
     dp.include_router(invites.router)
 
-    await setup_default_commands(bot)
 
     for coach_telegram_id in settings.coach_ids:
         await setup_coach_commands(bot, coach_telegram_id)
+
+    await setup_default_commands(bot)
 
     await dp.start_polling(bot)
 

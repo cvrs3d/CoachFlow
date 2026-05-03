@@ -178,7 +178,7 @@ async def redeem_invite_code(
                     telegram_id=telegram_id,
                     username=username,
                     role="client",
-                    status="active",  # позже можно заменить на pending_until_consent
+                    status="pending", 
                 )
                 session.add(user)
                 await session.flush()
