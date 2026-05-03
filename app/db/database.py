@@ -3,6 +3,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 
+import logging
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
 
 engine = create_async_engine(
     settings.database_url,
@@ -24,3 +27,28 @@ AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     expire_on_commit=False,
 )
+
+
+logger = logging.getLogger(__name__)
+
+
+async def safe_commit(session):
+    try:
+        await session.commit()
+
+    except IntegrityError as e:
+        await session.rollback()
+
+        logger.warning(
+            "Database integrity error: %s",
+            str(e.orig) if hasattr(e, "orig") else str(e),
+        )
+
+        raise
+
+    except SQLAlchemyError:
+        await session.rollback()
+
+        logger.exception("Database error during commit")
+
+        raise
