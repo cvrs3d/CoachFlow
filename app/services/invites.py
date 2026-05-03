@@ -14,6 +14,8 @@ from app.db.models import (
     User,
 )
 
+from app.db.database import safe_commit
+
 
 def generate_invite_code() -> str:
     return secrets.token_urlsafe(12).replace("-", "_")[:16]
@@ -58,7 +60,7 @@ async def create_invite_for_coach(
             )
 
             session.add(invite)
-            await session.commit()
+            await safe_commit(session)
             await session.refresh(invite)
             return invite
 
@@ -91,7 +93,7 @@ async def create_invite_for_coach(
             )
 
             session.add(invite)
-            await session.commit()
+            await safe_commit(session)
             await session.refresh(invite)
             return invite
 
@@ -206,7 +208,7 @@ async def redeem_invite_code(
             )
             session.add(relation)
 
-            await session.commit()
+            await safe_commit(session)
 
             return RedeemInviteResult(
                 ok=True,
