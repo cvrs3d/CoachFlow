@@ -78,3 +78,29 @@ async def activate_user_after_consent(telegram_id: int) -> bool:
 
         await safe_commit(session)
         return True
+
+async def set_client_display_name(
+    telegram_id: int,
+    display_name: str,
+) -> bool:
+    async with AsyncSessionLocal() as session:
+        user_result = await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = user_result.scalar_one_or_none()
+
+        if user is None:
+            return False
+
+        client_result = await session.execute(
+            select(Client).where(Client.user_id == user.id)
+        )
+        client = client_result.scalar_one_or_none()
+
+        if client is None:
+            return False
+
+        client.display_name = display_name.strip()
+
+        await safe_commit(session)
+        return True
