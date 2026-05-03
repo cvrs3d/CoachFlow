@@ -8,6 +8,7 @@ from sqlalchemy import select, text
 from app.db.database import AsyncSessionLocal, safe_commit
 from app.db.models import AvailabilitySlot, Coach, User
 
+from app.services.invites import get_coach_by_telegram_id
 
 @dataclass
 class CreateSlotResult:
@@ -17,17 +18,6 @@ class CreateSlotResult:
     starts_at: datetime | None = None
     ends_at: datetime | None = None
 
-
-async def get_coach_by_telegram_id(telegram_id: int) -> Coach | None:
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Coach)
-            .join(User, Coach.user_id == User.id)
-            .where(User.telegram_id == telegram_id)
-            .where(User.role == "coach")
-            .where(User.status == "active")
-        )
-        return result.scalar_one_or_none()
 
 
 def parse_coach_datetime(
