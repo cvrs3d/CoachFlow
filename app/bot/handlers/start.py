@@ -56,8 +56,7 @@ async def start_handler(message: Message, command: CommandObject) -> None:
     result = await redeem_invite_code(
         code=invite_code,
         telegram_id=message.from_user.id,
-        username=message.from_user.username,
-        first_name=message.from_user.first_name,
+        username=message.from_user.username
     )
 
     if result.ok:
@@ -73,6 +72,14 @@ async def start_handler(message: Message, command: CommandObject) -> None:
 
     if result.reason == "already_registered":
         await message.answer("Вы уже зарегистрированы.")
+        return
+    
+    if result.reason == "pending_consent":
+        await message.answer(
+            "Регистрация уже начата.\n\n"
+            "Для завершения нужно согласие на обработку данных.",
+            reply_markup=privacy_consent_keyboard(),
+        )
         return
 
     if result.reason == "invalid_or_used_invite":

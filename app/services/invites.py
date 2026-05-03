@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, text
 
-from app.db.database import AsyncSessionLocal
+from app.db.database import AsyncSessionLocal, safe_commit
 from app.db.models import (
     Client,
     ClientCoachRelation,
@@ -198,6 +198,11 @@ async def redeem_invite_code(
                 await session.flush()
 
             # 4. Создаем client.
+            client_result = await session.execute(
+                select(Client).where(Client.user_id == user.id)
+            )
+            client = client_result.scalar_one_or_none()
+
             if client is None:
                 client = Client(
                     id=str(uuid.uuid4()),
@@ -230,6 +235,15 @@ async def redeem_invite_code(
                 session.add(relation)
             else:
                 relation.status = "active"
+
+            await safe_commit(session)
+
+            return RedeemInviteResult(
+                ok=True,
+                user_id=user.id,
+                client_id=client.id,
+                coach_id=coach_id,
+            )
 
         except Exception:
             await session.rollback()
