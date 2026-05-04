@@ -7,6 +7,7 @@ from sqlalchemy.orm import aliased
 from app.db.database import AsyncSessionLocal, safe_commit
 from app.db.models import Appointment, AvailabilitySlot, Client, Coach, User
 
+from app.utils.datetime import format_slot_range_for_timezone
 
 async def send_appointment_24h_reminders(bot: Bot) -> None:
     """
@@ -41,9 +42,15 @@ async def send_appointment_24h_reminders(bot: Bot) -> None:
 
         rows = result.all()
 
+
         for appointment, slot, client, coach, client_user, coach_user in rows:
             client_sent = False
             coach_sent = False
+
+            slot_time = format_slot_range_for_timezone(
+            starts_at = slot.starts_at,
+            ends_at = slot.ends_at,
+            timezone_name = coach.timezone)
 
             try:
                 await bot.send_message(
@@ -51,7 +58,7 @@ async def send_appointment_24h_reminders(bot: Bot) -> None:
                     text=(
                         f"Напоминание о занятии с {'тренером' + coach.display_name or 'тренером'}.\n\n"
                         f"Занятие состоится завтра:\n"
-                        f"{slot.starts_at}\n\n"
+                        f"{slot_time}\n\n"
                         "Если не сможете прийти, свяжитесь с тренером заранее."
                     ),
                 )
@@ -66,7 +73,7 @@ async def send_appointment_24h_reminders(bot: Bot) -> None:
                     text=(
                         "Напоминание о занятии с клиентом.\n\n"
                         f"Клиент: {client.display_name or 'без имени'}\n"
-                        f"Время: {slot.starts_at}\n\n"
+                        f"Время: {slot_time}\n\n"
                         "Уведомление отправлено за день до занятия."
                     ),
                 )

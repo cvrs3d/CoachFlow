@@ -40,7 +40,7 @@ async def my_bookings_handler(message: Message) -> None:
     )
 
 
-@router.callback_query(F.data == "client_booking:list")
+@router.callback_query(F.data == "c_b:l")
 async def my_bookings_callback_handler(callback: CallbackQuery) -> None:
     context = await get_active_client_context(callback.from_user.id)
 
@@ -65,7 +65,7 @@ async def my_bookings_callback_handler(callback: CallbackQuery) -> None:
     )
 
 
-@router.callback_query(F.data.startswith("client_booking:open:"))
+@router.callback_query(F.data.startswith("c_b:o"))
 async def open_client_booking_handler(callback: CallbackQuery) -> None:
     appointment_id = callback.data.split(":", 2)[2]
 
@@ -117,7 +117,7 @@ async def open_client_booking_handler(callback: CallbackQuery) -> None:
     )
 
 
-@router.callback_query(F.data.startswith("client_booking:confirm_cancel:"))
+@router.callback_query(F.data.startswith("c_b:c_c:"))
 async def confirm_cancel_client_booking_handler(callback: CallbackQuery) -> None:
     appointment_id = callback.data.split(":", 2)[2]
 
@@ -155,7 +155,7 @@ async def confirm_cancel_client_booking_handler(callback: CallbackQuery) -> None
     )
 
 
-@router.callback_query(F.data.startswith("client_booking:cancel:"))
+@router.callback_query(F.data.startswith("c_b:c:"))
 async def cancel_client_booking_handler(callback: CallbackQuery) -> None:
     appointment_id = callback.data.split(":", 2)[2]
 

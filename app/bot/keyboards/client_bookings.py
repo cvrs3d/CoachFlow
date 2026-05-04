@@ -21,7 +21,7 @@ def client_bookings_keyboard(
             [
                 InlineKeyboardButton(
                     text=slot_time,
-                    callback_data=f"client_booking:open:{appointment.id}",
+                    callback_data=f"c_b:o:{appointment.id}",
                 )
             ]
         )
@@ -40,7 +40,7 @@ def client_booking_card_keyboard(
             [
                 InlineKeyboardButton(
                     text="❌ Отменить запись",
-                    callback_data=f"client_booking:confirm_cancel:{appointment_id}",
+                    callback_data=f"c_b:c_c:{appointment_id}",
                 )
             ]
         )
@@ -49,7 +49,7 @@ def client_booking_card_keyboard(
         [
             InlineKeyboardButton(
                 text="⬅️ Назад к моим записям",
-                callback_data="client_booking:list",
+                callback_data="c_b:l",
             )
         ]
     )
@@ -63,13 +63,13 @@ def confirm_cancel_client_booking_keyboard(appointment_id: str) -> InlineKeyboar
             [
                 InlineKeyboardButton(
                     text="✅ Да, отменить",
-                    callback_data=f"client_booking:cancel:{appointment_id}",
+                    callback_data=f"c_b:c:{appointment_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="⬅️ Назад",
-                    callback_data=f"client_booking:open:{appointment_id}",
+                    callback_data=f"c_b:o:{appointment_id}",
                 )
             ],
         ]
