@@ -4,7 +4,17 @@ import logging
 from aiogram import Bot, Dispatcher
 
 from app.core.config import settings
-from app.bot.handlers import start, coach, clients, invites, privacy, registration, menu, schedule, booking
+from app.bot.handlers import (
+    booking,
+    client_bookings,
+    clients,
+    invites,
+    menu,
+    privacy,
+    registration,
+    schedule,
+    start,
+)
 from app.services.bot_commands import setup_coach_commands, setup_default_commands
 from app.core.logging import setup_logging
 
@@ -23,11 +33,12 @@ async def main() -> None:
     scheduler = setup_scheduler(bot)
 
     dp.include_router(start.router)
-    dp.include_router(privacy.router)
     dp.include_router(invites.router)
+    dp.include_router(privacy.router)
     dp.include_router(registration.router)
     dp.include_router(schedule.router)
     dp.include_router(booking.router)
+    dp.include_router(client_bookings.router)
     dp.include_router(clients.router)
     dp.include_router(menu.router)
 

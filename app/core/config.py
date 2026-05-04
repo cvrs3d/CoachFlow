@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     coach_telegram_ids: str = ""
 
+    client_cancellation_deadline_hours: int = 24
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

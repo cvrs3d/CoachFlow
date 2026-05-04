@@ -25,6 +25,7 @@ def client_main_menu() -> ReplyKeyboardMarkup:
         keyboard=[
             [
                 KeyboardButton(text="📅 Выбрать время"),
+                KeyboardButton(text="📋 Мои записи"),
             ],
             [
                 KeyboardButton(text="🍽 Отправить фото еды"),
