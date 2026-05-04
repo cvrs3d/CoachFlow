@@ -4,7 +4,7 @@ import logging
 from aiogram import Bot, Dispatcher
 
 from app.core.config import settings
-from app.bot.handlers import start, coach, client, invites, privacy, registration, menu, schedule, booking
+from app.bot.handlers import start, coach, clients, invites, privacy, registration, menu, schedule, booking
 from app.services.bot_commands import setup_coach_commands, setup_default_commands
 from app.core.logging import setup_logging
 
@@ -28,6 +28,7 @@ async def main() -> None:
     dp.include_router(registration.router)
     dp.include_router(schedule.router)
     dp.include_router(booking.router)
+    dp.include_router(clients.router)
     dp.include_router(menu.router)
 
     for coach_telegram_id in settings.coach_ids:
