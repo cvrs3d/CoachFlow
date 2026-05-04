@@ -175,7 +175,7 @@ async def cancel_booked_slot_for_coach(
             slot, appointment, client, client_user = row
 
             slot.status = "cancelled"
-            appointment.status = "cancelled"
+            appointment.status = "cancelled_by_coach"
 
             starts_at = str(slot.starts_at)
             ends_at = str(slot.ends_at)

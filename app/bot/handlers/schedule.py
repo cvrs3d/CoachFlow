@@ -26,7 +26,7 @@ from app.services.schedule import (
     list_coach_slots,
     parse_coach_datetime,
 )
-from app.utils.datetime import format_slot_range_for_timezone
+from app.utils.datetime import format_slot_range_for_timezone, ensure_utc, format_dt_for_timezone
 
 router = Router()
 
@@ -295,7 +295,7 @@ async def delete_available_slot_handler(callback: CallbackQuery) -> None:
         reply_markup=coach_slots_keyboard(slots),
     )
 
-@router.callback_query(F.data.startswith("schedule:cancel_booked:"))
+@router.callback_query(F.data.startswith("sc:cb:"))
 async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
     slot_id = callback.data.split(":", 2)[2]
 
@@ -312,14 +312,6 @@ async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
         )
         return
 
-    slot = card.slot
-
-    slot_time = format_slot_range_for_timezone(
-        slot.starts_at,
-        slot.ends_at,
-        timezone_name,
-    )
-
     client_name = "неизвестный клиент"
 
     if card.client is not None:
@@ -328,12 +320,12 @@ async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         "Отменить занятие?\n\n"
         f"Клиент: {client_name}\n"
-        f"Время: {slot_time}\n\n"
+        f"Время: {card.slot.starts_at} — {card.slot.ends_at}\n\n"
         "Клиент получит уведомление об отмене.",
         reply_markup=confirm_cancel_booked_slot_keyboard(slot_id),
     )
 
-@router.callback_query(F.data.startswith("schedule:confirm_cancel_booked:"))
+@router.callback_query(F.data.startswith("sc:ccb:"))
 async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
     slot_id = callback.data.split(":", 2)[2]
 
@@ -342,10 +334,8 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
         slot_id=slot_id,
     )
 
-    card = await get_slot_card_for_coach(
-        telegram_id=callback.from_user.id,
-        slot_id=slot_id,
-    )
+    coach = await get_coach_by_telegram_id(callback.from_user.id)
+    timezone_name = coach.timezone if coach else "Europe/Prague"
 
     await callback.answer()
 
@@ -355,11 +345,18 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
         )
         return
 
-    slot = card.slot
+    starts_at = result.starts_at
+    ends_at = result.ends_at
+
+    if isinstance(starts_at, str):
+        starts_at = datetime.fromisoformat(starts_at)
+
+    if isinstance(ends_at, str):
+        ends_at = datetime.fromisoformat(ends_at)
 
     slot_time = format_slot_range_for_timezone(
-        slot.starts_at,
-        slot.ends_at,
+        starts_at,
+        ends_at,
         timezone_name,
     )
 
@@ -371,7 +368,8 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
                 chat_id=result.client_telegram_id,
                 text=(
                     "Ваше занятие отменено тренером.\n\n"
-                    f"Время: {slot_time}\n\n"
+                    f"Время: {slot_time}\n"
+                    f"Часовой пояс: {timezone_name}\n\n"
                     "Вы можете выбрать другое доступное время в боте."
                 ),
             )

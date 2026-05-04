@@ -194,7 +194,7 @@ async def cancel_booking_by_client(
                 await session.rollback()
                 return CancelClientBookingResult(ok=False, reason="too_late")
 
-            appointment.status = "cancelled"
+            appointment.status = "cancelled_by_client"
 
             # Клиент отменил заранее → слот снова доступен.
             slot.status = "available"

@@ -58,7 +58,7 @@ async def create_availability_slot(
             conflict_result = await session.execute(
                 select(AvailabilitySlot)
                 .where(AvailabilitySlot.coach_id == coach_id)
-                .where(AvailabilitySlot.status != "cancelled")
+                .where(AvailabilitySlot.status not in ["cancelled_by_client", "cancelled_by_coach"])
                 .where(AvailabilitySlot.starts_at < ends_at)
                 .where(AvailabilitySlot.ends_at > starts_at)
                 .limit(1)

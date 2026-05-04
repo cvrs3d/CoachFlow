@@ -96,7 +96,7 @@ def booked_slot_management_keyboard(slot_id: str) -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="❌ Отменить занятие и уведомить клиента",
-                    callback_data=f"schedule:cancel_booked:{slot_id}",
+                    callback_data=f"sc:cb:{slot_id}",
                 )
             ],
             [
@@ -115,7 +115,7 @@ def confirm_cancel_booked_slot_keyboard(slot_id: str) -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="✅ Да, отменить",
-                    callback_data=f"schedule:confirm_cancel_booked:{slot_id}",
+                    callback_data=f"sc:ccb:{slot_id}",
                 )
             ],
             [

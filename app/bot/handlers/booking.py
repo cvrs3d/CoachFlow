@@ -8,6 +8,8 @@ from app.services.booking import (
     list_available_slots_for_client,
 )
 
+from app.utils.datetime import format_slot_range_for_timezone, ensure_utc, format_dt_for_timezone
+
 router = Router()
 
 
@@ -67,6 +69,7 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
             f"Время: {slot_time}\n"
             f"Часовой пояс: {timezone_name}"
         )
+        return
 
     if result.reason == "slot_not_available":
         await callback.message.edit_text(
