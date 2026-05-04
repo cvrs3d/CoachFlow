@@ -150,7 +150,8 @@ class Appointment(Base):
     reminder_24h_sent_at: Mapped[str | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
-        CheckConstraint("status IN ('booked', 'cancelled', 'completed', 'no_show')", name="ck_appointments_status"),
+        CheckConstraint(
+        "status IN ('booked', 'cancelled_by_client', 'cancelled_by_coach', 'completed', 'no_show')", name="ck_appointments_status"),
         Index("idx_appointments_coach_client", "coach_id", "client_id"),
     )
 
