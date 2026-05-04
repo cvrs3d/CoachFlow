@@ -147,6 +147,7 @@ class Appointment(Base):
 
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="booked")
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    reminder_24h_sent_at: Mapped[str | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint("status IN ('booked', 'cancelled', 'completed', 'no_show')", name="ck_appointments_status"),
