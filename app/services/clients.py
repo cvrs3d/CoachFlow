@@ -2,6 +2,10 @@ from dataclasses import dataclass
 
 from sqlalchemy import func, select
 
+from datetime import datetime, timezone
+
+from app.db.models import AvailabilitySlot
+
 from app.db.database import AsyncSessionLocal, safe_commit
 from app.db.models import Appointment, Client, ClientCoachRelation, Coach, User
 
@@ -208,7 +212,7 @@ async def deactivate_client_for_coach(
         rows = appointments_result.all()
 
         for appointment, slot in rows:
-            appointment.status = "cancelled"
+            appointment.status = "cancelled_by_coach"
 
             # Слот освобождаем, чтобы тренер мог отдать его другому клиенту.
             # Если хочешь при удалении клиента полностью убирать эти окна,

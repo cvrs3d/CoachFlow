@@ -3,9 +3,14 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 
 
-from app.bot.keyboards.clients import client_card_keyboard, clients_list_keyboard
+from app.bot.keyboards.clients import (
+    client_card_keyboard,
+    clients_list_keyboard,
+    confirm_delete_client_keyboard,
+)
 from app.bot.states.clients import ClientEditStates
 from app.services.clients import (
+    deactivate_client_for_coach,
     get_client_card_for_coach,
     get_client_display_name_for_coach,
     list_clients_for_coach,
@@ -170,4 +175,62 @@ async def edit_client_name_process_handler(
     await message.answer(
         text,
         reply_markup=client_card_keyboard(client.id),
+    )
+
+@router.callback_query(F.data.startswith("client:confirm_delete:"))
+async def confirm_delete_client_handler(callback: CallbackQuery) -> None:
+    client_id = callback.data.split(":", 2)[2]
+
+    card = await get_client_card_for_coach(
+        telegram_id=callback.from_user.id,
+        client_id=client_id,
+    )
+
+    await callback.answer()
+
+    if card is None:
+        await callback.message.edit_text(
+            "Клиент не найден или у вас нет доступа."
+        )
+        return
+
+    await callback.message.edit_text(
+        "Удалить клиента?\n\n"
+        f"Клиент: {card.client.display_name or 'без имени'}\n\n"
+        "Клиент будет деактивирован. Его будущие записи будут отменены, "
+        "а занятые слоты снова станут доступными.",
+        reply_markup=confirm_delete_client_keyboard(client_id),
+    )
+
+
+@router.callback_query(F.data.startswith("client:delete:"))
+async def delete_client_handler(callback: CallbackQuery) -> None:
+    client_id = callback.data.split(":", 2)[2]
+
+    ok = await deactivate_client_for_coach(
+        telegram_id=callback.from_user.id,
+        client_id=client_id,
+    )
+
+    await callback.answer()
+
+    if not ok:
+        await callback.message.edit_text(
+            "Не удалось удалить клиента. Клиент не найден или у вас нет доступа."
+        )
+        return
+
+    clients = await list_clients_for_coach(callback.from_user.id)
+
+    if not clients:
+        await callback.message.edit_text(
+            "Клиент удален.\n\n"
+            "У вас больше нет активных клиентов."
+        )
+        return
+
+    await callback.message.edit_text(
+        "Клиент удален.\n\n"
+        "Ваши клиенты:",
+        reply_markup=clients_list_keyboard(clients),
     )
