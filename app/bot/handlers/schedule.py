@@ -170,6 +170,12 @@ async def process_slot_duration_handler(
 
 @router.callback_query(F.data == "schedule:list_slots")
 async def list_slots_handler(callback: CallbackQuery) -> None:
+    coach = await get_coach_by_telegram_id(callback.from_user.id)
+
+    if coach is None:
+        await callback.answer()
+        return
+
     slots = await list_coach_manageable_slots(
         telegram_id=callback.from_user.id,
         limit=20,
@@ -184,8 +190,8 @@ async def list_slots_handler(callback: CallbackQuery) -> None:
         return
 
     await callback.message.edit_text(
-        "Ваши будущие слоты:",
-        reply_markup=coach_slots_keyboard(slots),
+        f"Ваши будущие слоты.\nВремя указано в часовом поясе: {coach.timezone}",
+        reply_markup=coach_slots_keyboard(slots, coach.timezone),
     )
 
 @router.callback_query(F.data.startswith("schedule:open_slot:"))
