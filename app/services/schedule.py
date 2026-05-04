@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select, text
@@ -45,8 +45,9 @@ async def create_availability_slot(
     starts_at: datetime,
     duration_minutes: int,
 ) -> CreateSlotResult:
+    starts_at = starts_at.astimezone(timezone.utc)
     ends_at = starts_at + timedelta(minutes=duration_minutes)
-
+    
     async with AsyncSessionLocal() as session:
         await session.execute(text("BEGIN IMMEDIATE"))
 
