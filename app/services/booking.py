@@ -137,6 +137,9 @@ async def book_slot_for_client(
                 await session.rollback()
                 return BookSlotResult(ok=False, reason="slot_not_available")
 
+            starts_at = slot_row["starts_at"]
+            ends_at = slot_row["ends_at"]
+            
             appointment = Appointment(
                 id=str(uuid.uuid4()),
                 slot_id=slot_row["id"],

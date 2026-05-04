@@ -26,6 +26,7 @@ from app.services.schedule import (
     list_coach_slots,
     parse_coach_datetime,
 )
+from app.utils.datetime import format_slot_range_for_timezone
 
 router = Router()
 
@@ -203,6 +204,10 @@ async def open_slot_handler(callback: CallbackQuery) -> None:
         slot_id=slot_id,
     )
 
+    coach = await get_coach_by_telegram_id(callback.from_user.id)
+    timezone_name = coach.timezone if coach else "Europe/Prague"
+
+
     await callback.answer()
 
     if card is None:
@@ -213,10 +218,16 @@ async def open_slot_handler(callback: CallbackQuery) -> None:
 
     slot = card.slot
 
+    slot_time = format_slot_range_for_timezone(
+        slot.starts_at,
+        slot.ends_at,
+        timezone_name,
+    )
     if slot.status == "available":
         text = (
             "Карточка слота\n\n"
-            f"Время: {slot.starts_at} — {slot.ends_at}\n"
+            f"Время: {slot_time}\n"
+            f"Часовой пояс: {timezone_name}\n"
             "Статус: свободен"
         )
 

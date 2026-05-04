@@ -1,20 +1,21 @@
-from datetime import datetime
-
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.db.models import AvailabilitySlot
+from app.utils.datetime import format_slot_range_for_timezone
 
 
-def available_slots_keyboard(slots: list[AvailabilitySlot]) -> InlineKeyboardMarkup:
+def available_slots_keyboard(
+    slots: list[AvailabilitySlot],
+    timezone_name: str = "Europe/Prague",
+) -> InlineKeyboardMarkup:
     keyboard = []
 
     for slot in slots:
-        starts_at = slot.starts_at
-
-        if isinstance(starts_at, str):
-            label = starts_at
-        else:
-            label = starts_at.strftime("%Y-%m-%d %H:%M")
+        label = format_slot_range_for_timezone(
+            slot.starts_at,
+            slot.ends_at,
+            timezone_name,
+        )
 
         keyboard.append(
             [

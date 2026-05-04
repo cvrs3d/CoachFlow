@@ -4,6 +4,8 @@ from datetime import timedelta
 
 from app.db.models import AvailabilitySlot
 
+from app.utils.datetime import format_slot_range_for_timezone
+
 
 def coach_schedule_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(

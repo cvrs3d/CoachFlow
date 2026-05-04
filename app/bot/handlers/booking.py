@@ -4,6 +4,7 @@ from aiogram.types import CallbackQuery, Message
 from app.bot.keyboards.booking import available_slots_keyboard
 from app.services.booking import (
     book_slot_for_client,
+    get_active_client_context,
     list_available_slots_for_client,
 )
 
@@ -12,6 +13,12 @@ router = Router()
 
 @router.message(F.text == "📅 Выбрать время")
 async def choose_time_handler(message: Message) -> None:
+    context = await get_active_client_context(message.from_user.id)
+
+    if context is None:
+        await message.answer("Не удалось найти активный профиль клиента.")
+        return
+
     slots = await list_available_slots_for_client(
         telegram_id=message.from_user.id,
         limit=10,
@@ -24,10 +31,9 @@ async def choose_time_handler(message: Message) -> None:
         return
 
     await message.answer(
-        "Выберите доступное время:",
-        reply_markup=available_slots_keyboard(slots),
+        f"Выберите доступное время.\nВремя указано в часовом поясе тренера: {context.coach.timezone}",
+        reply_markup=available_slots_keyboard(slots, context.coach.timezone),
     )
-
 
 @router.callback_query(F.data.startswith("book_slot:"))
 async def book_slot_handler(callback: CallbackQuery) -> None:
@@ -41,11 +47,26 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if result.ok:
+        context = await get_active_client_context(callback.from_user.id)
+        timezone_name = context.coach.timezone if context else "Europe/Prague"
+
+        # если result.starts_at/result.ends_at строки:
+        from datetime import datetime
+
+        starts_at = datetime.fromisoformat(result.starts_at) if isinstance(result.starts_at, str) else result.starts_at
+        ends_at = datetime.fromisoformat(result.ends_at) if isinstance(result.ends_at, str) else result.ends_at
+
+        slot_time = format_slot_range_for_timezone(
+            starts_at,
+            ends_at,
+            timezone_name,
+        )
+
         await callback.message.edit_text(
             "Запись подтверждена.\n\n"
-            f"Время: {result.starts_at} — {result.ends_at}"
+            f"Время: {slot_time}\n"
+            f"Часовой пояс: {timezone_name}"
         )
-        return
 
     if result.reason == "slot_not_available":
         await callback.message.edit_text(
