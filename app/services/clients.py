@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import func, select
 
-from app.db.database import AsyncSessionLocal
+from app.db.database import AsyncSessionLocal, safe_commit
 from app.db.models import Appointment, Client, ClientCoachRelation, Coach, User
 
 
@@ -100,3 +100,55 @@ async def get_client_card_for_coach(
             user=user,
             future_appointments_count=future_appointments_count,
         )
+
+async def update_client_display_name_for_coach(
+    *,
+    telegram_id: int,
+    client_id: str,
+    new_display_name: str,
+) -> bool:
+    async with AsyncSessionLocal() as session:
+        coach_result = await session.execute(
+            select(Coach)
+            .join(User, Coach.user_id == User.id)
+            .where(User.telegram_id == telegram_id)
+            .where(User.role == "coach")
+            .where(User.status == "active")
+        )
+        coach = coach_result.scalar_one_or_none()
+
+        if coach is None:
+            return False
+
+        client_result = await session.execute(
+            select(Client)
+            .join(ClientCoachRelation, ClientCoachRelation.client_id == Client.id)
+            .where(Client.id == client_id)
+            .where(ClientCoachRelation.coach_id == coach.id)
+            .where(ClientCoachRelation.status == "active")
+        )
+        client = client_result.scalar_one_or_none()
+
+        if client is None:
+            return False
+
+        client.display_name = new_display_name.strip()
+
+        await safe_commit(session)
+        return True
+
+
+async def get_client_display_name_for_coach(
+    *,
+    telegram_id: int,
+    client_id: str,
+) -> str | None:
+    card = await get_client_card_for_coach(
+        telegram_id=telegram_id,
+        client_id=client_id,
+    )
+
+    if card is None:
+        return None
+
+    return card.client.display_name
