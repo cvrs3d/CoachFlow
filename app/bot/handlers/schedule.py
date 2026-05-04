@@ -312,6 +312,14 @@ async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
         )
         return
 
+    slot = card.slot
+
+    slot_time = format_slot_range_for_timezone(
+        slot.starts_at,
+        slot.ends_at,
+        timezone_name,
+    )
+
     client_name = "неизвестный клиент"
 
     if card.client is not None:
@@ -320,7 +328,7 @@ async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         "Отменить занятие?\n\n"
         f"Клиент: {client_name}\n"
-        f"Время: {card.slot.starts_at} — {card.slot.ends_at}\n\n"
+        f"Время: {slot_time}\n\n"
         "Клиент получит уведомление об отмене.",
         reply_markup=confirm_cancel_booked_slot_keyboard(slot_id),
     )
@@ -334,6 +342,11 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
         slot_id=slot_id,
     )
 
+    card = await get_slot_card_for_coach(
+        telegram_id=callback.from_user.id,
+        slot_id=slot_id,
+    )
+
     await callback.answer()
 
     if not result.ok:
@@ -341,6 +354,14 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
             "Не удалось отменить занятие. Возможно, оно уже отменено."
         )
         return
+
+    slot = card.slot
+
+    slot_time = format_slot_range_for_timezone(
+        slot.starts_at,
+        slot.ends_at,
+        timezone_name,
+    )
 
     notification_sent = False
 
@@ -350,7 +371,7 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
                 chat_id=result.client_telegram_id,
                 text=(
                     "Ваше занятие отменено тренером.\n\n"
-                    f"Время: {result.starts_at} — {result.ends_at}\n\n"
+                    f"Время: {slot_time}\n\n"
                     "Вы можете выбрать другое доступное время в боте."
                 ),
             )
