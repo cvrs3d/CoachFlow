@@ -152,3 +152,70 @@ async def get_client_display_name_for_coach(
         return None
 
     return card.client.display_name
+
+async def deactivate_client_for_coach(
+    *,
+    telegram_id: int,
+    client_id: str,
+) -> bool:
+    async with AsyncSessionLocal() as session:
+        coach_result = await session.execute(
+            select(Coach)
+            .join(User, Coach.user_id == User.id)
+            .where(User.telegram_id == telegram_id)
+            .where(User.role == "coach")
+            .where(User.status == "active")
+        )
+        coach = coach_result.scalar_one_or_none()
+
+        if coach is None:
+            return False
+
+        client_result = await session.execute(
+            select(Client)
+            .join(ClientCoachRelation, ClientCoachRelation.client_id == Client.id)
+            .where(Client.id == client_id)
+            .where(ClientCoachRelation.coach_id == coach.id)
+            .where(ClientCoachRelation.status == "active")
+        )
+        client = client_result.scalar_one_or_none()
+
+        if client is None:
+            return False
+
+        relation_result = await session.execute(
+            select(ClientCoachRelation)
+            .where(ClientCoachRelation.client_id == client.id)
+            .where(ClientCoachRelation.coach_id == coach.id)
+        )
+        relation = relation_result.scalar_one_or_none()
+
+        if relation is not None:
+            relation.status = "inactive"
+
+        client.status = "inactive"
+
+        # Отменяем будущие записи клиента у этого тренера.
+        appointments_result = await session.execute(
+            select(Appointment, AvailabilitySlot)
+            .join(AvailabilitySlot, Appointment.slot_id == AvailabilitySlot.id)
+            .where(Appointment.client_id == client.id)
+            .where(Appointment.coach_id == coach.id)
+            .where(Appointment.status == "booked")
+            .where(AvailabilitySlot.starts_at >= datetime.now(timezone.utc))
+        )
+
+        rows = appointments_result.all()
+
+        for appointment, slot in rows:
+            appointment.status = "cancelled"
+
+            # Слот освобождаем, чтобы тренер мог отдать его другому клиенту.
+            # Если хочешь при удалении клиента полностью убирать эти окна,
+            # замени на slot.status = "cancelled".
+            slot.status = "available"
+            slot.booked_by_client_id = None
+            slot.booked_at = None
+
+        await safe_commit(session)
+        return True
