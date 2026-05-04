@@ -44,3 +44,21 @@ def client_card_keyboard(client_id: str) -> InlineKeyboardMarkup:
             ],
         ]
     )
+
+def confirm_delete_client_keyboard(client_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Да, удалить",
+                    callback_data=f"client:delete:{client_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Назад",
+                    callback_data=f"client:open:{client_id}",
+                )
+            ],
+        ]
+    )

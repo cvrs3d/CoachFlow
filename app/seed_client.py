@@ -43,7 +43,6 @@ async def seed_client(
                 id=str(uuid.uuid4()),
                 telegram_id=client_telegram_id,
                 username=username,
-                first_name=None,
                 role="client",
                 status="active",
             )
