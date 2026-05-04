@@ -38,11 +38,19 @@ def slot_duration_keyboard() -> InlineKeyboardMarkup:
         ]
     )
 
-def coach_slots_keyboard(slots: list[AvailabilitySlot]) -> InlineKeyboardMarkup:
+def coach_slots_keyboard(
+    slots: list[AvailabilitySlot],
+    timezone_name: str = "Europe/Prague",
+) -> InlineKeyboardMarkup:
     keyboard = []
 
     for slot in slots:
-        starts_at = str(slot.starts_at.astimezone)
+        slot_time = format_slot_range_for_timezone(
+            slot.starts_at,
+            slot.ends_at,
+            timezone_name,
+        )
+
         status_text = {
             "available": "свободен",
             "booked": "занят",
@@ -52,7 +60,7 @@ def coach_slots_keyboard(slots: list[AvailabilitySlot]) -> InlineKeyboardMarkup:
         keyboard.append(
             [
                 InlineKeyboardButton(
-                    text=f"{starts_at} — {status_text}",
+                    text=f"{slot_time} — {status_text}",
                     callback_data=f"schedule:open_slot:{slot.id}",
                 )
             ]
