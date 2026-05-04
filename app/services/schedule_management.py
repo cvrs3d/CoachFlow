@@ -133,7 +133,7 @@ async def delete_available_slot_for_coach(
 
             slot.status = "cancelled"
 
-            await safe_commit(commit)
+            await safe_commit(session)
             return True
 
         except Exception:

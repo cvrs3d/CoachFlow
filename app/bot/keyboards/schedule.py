@@ -1,5 +1,9 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from datetime import timedelta
+
+from app.db.models import AvailabilitySlot
+
 
 def coach_schedule_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
@@ -38,7 +42,7 @@ def coach_slots_keyboard(slots: list[AvailabilitySlot]) -> InlineKeyboardMarkup:
     keyboard = []
 
     for slot in slots:
-        starts_at = str(slot.starts_at)
+        starts_at = str(slot.starts_at.astimezone)
         status_text = {
             "available": "свободен",
             "booked": "занят",

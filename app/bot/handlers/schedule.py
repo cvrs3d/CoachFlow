@@ -4,7 +4,21 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from app.bot.keyboards.schedule import coach_schedule_keyboard, slot_duration_keyboard
+from app.bot.keyboards.schedule import (
+    available_slot_management_keyboard,
+    booked_slot_management_keyboard,
+    coach_schedule_keyboard,
+    coach_slots_keyboard,
+    confirm_cancel_booked_slot_keyboard,
+    slot_duration_keyboard,
+)
+
+from app.services.schedule_management import (
+    cancel_booked_slot_for_coach,
+    delete_available_slot_for_coach,
+    get_slot_card_for_coach,
+    list_coach_manageable_slots,
+)
 from app.bot.states.schedule import ScheduleStates
 from app.services.schedule import (
     create_availability_slot,
@@ -156,25 +170,182 @@ async def process_slot_duration_handler(
 
 @router.callback_query(F.data == "schedule:list_slots")
 async def list_slots_handler(callback: CallbackQuery) -> None:
-    coach = await get_coach_by_telegram_id(callback.from_user.id)
-
-    if coach is None:
-        await callback.answer()
-        return
-
-    slots = await list_coach_slots(coach_id=coach.id, limit=10)
+    slots = await list_coach_manageable_slots(
+        telegram_id=callback.from_user.id,
+        limit=20,
+    )
 
     await callback.answer()
 
     if not slots:
-        await callback.message.answer("У вас пока нет созданных слотов.")
+        await callback.message.edit_text(
+            "У вас пока нет будущих активных слотов."
+        )
         return
 
-    lines = ["Ближайшие слоты:\n"]
+    await callback.message.edit_text(
+        "Ваши будущие слоты:",
+        reply_markup=coach_slots_keyboard(slots),
+    )
 
-    for slot in slots:
-        lines.append(
-            f"• {slot.starts_at} — {slot.ends_at} | {slot.status}"
+@router.callback_query(F.data.startswith("schedule:open_slot:"))
+async def open_slot_handler(callback: CallbackQuery) -> None:
+    slot_id = callback.data.split(":", 2)[2]
+
+    card = await get_slot_card_for_coach(
+        telegram_id=callback.from_user.id,
+        slot_id=slot_id,
+    )
+
+    await callback.answer()
+
+    if card is None:
+        await callback.message.edit_text(
+            "Слот не найден или у вас нет доступа."
+        )
+        return
+
+    slot = card.slot
+
+    if slot.status == "available":
+        text = (
+            "Карточка слота\n\n"
+            f"Время: {slot.starts_at} — {slot.ends_at}\n"
+            "Статус: свободен"
         )
 
-    await callback.message.answer("\n".join(lines))
+        await callback.message.edit_text(
+            text,
+            reply_markup=available_slot_management_keyboard(slot.id),
+        )
+        return
+
+    if slot.status == "booked":
+        client_name = "неизвестный клиент"
+
+        if card.client is not None:
+            client_name = card.client.display_name or "без имени"
+
+        text = (
+            "Карточка слота\n\n"
+            f"Время: {slot.starts_at} — {slot.ends_at}\n"
+            "Статус: занят\n"
+            f"Клиент: {client_name}"
+        )
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=booked_slot_management_keyboard(slot.id),
+        )
+        return
+
+    await callback.message.edit_text(
+        "Этот слот уже отменен."
+    )
+
+@router.callback_query(F.data.startswith("schedule:delete_available:"))
+async def delete_available_slot_handler(callback: CallbackQuery) -> None:
+    slot_id = callback.data.split(":", 2)[2]
+
+    ok = await delete_available_slot_for_coach(
+        telegram_id=callback.from_user.id,
+        slot_id=slot_id,
+    )
+
+    await callback.answer()
+
+    if not ok:
+        await callback.message.edit_text(
+            "Не удалось удалить слот. Возможно, он уже занят или отменен."
+        )
+        return
+
+    slots = await list_coach_manageable_slots(
+        telegram_id=callback.from_user.id,
+        limit=20,
+    )
+
+    if not slots:
+        await callback.message.edit_text(
+            "Слот удален.\n\n"
+            "У вас больше нет будущих активных слотов."
+        )
+        return
+
+    await callback.message.edit_text(
+        "Слот удален.\n\n"
+        "Ваши будущие слоты:",
+        reply_markup=coach_slots_keyboard(slots),
+    )
+
+@router.callback_query(F.data.startswith("schedule:cancel_booked:"))
+async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
+    slot_id = callback.data.split(":", 2)[2]
+
+    card = await get_slot_card_for_coach(
+        telegram_id=callback.from_user.id,
+        slot_id=slot_id,
+    )
+
+    await callback.answer()
+
+    if card is None or card.slot.status != "booked":
+        await callback.message.edit_text(
+            "Слот не найден или уже не является занятым."
+        )
+        return
+
+    client_name = "неизвестный клиент"
+
+    if card.client is not None:
+        client_name = card.client.display_name or "без имени"
+
+    await callback.message.edit_text(
+        "Отменить занятие?\n\n"
+        f"Клиент: {client_name}\n"
+        f"Время: {card.slot.starts_at} — {card.slot.ends_at}\n\n"
+        "Клиент получит уведомление об отмене.",
+        reply_markup=confirm_cancel_booked_slot_keyboard(slot_id),
+    )
+
+@router.callback_query(F.data.startswith("schedule:confirm_cancel_booked:"))
+async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
+    slot_id = callback.data.split(":", 2)[2]
+
+    result = await cancel_booked_slot_for_coach(
+        telegram_id=callback.from_user.id,
+        slot_id=slot_id,
+    )
+
+    await callback.answer()
+
+    if not result.ok:
+        await callback.message.edit_text(
+            "Не удалось отменить занятие. Возможно, оно уже отменено."
+        )
+        return
+
+    notification_sent = False
+
+    if result.client_telegram_id is not None:
+        try:
+            await callback.bot.send_message(
+                chat_id=result.client_telegram_id,
+                text=(
+                    "Ваше занятие отменено тренером.\n\n"
+                    f"Время: {result.starts_at} — {result.ends_at}\n\n"
+                    "Вы можете выбрать другое доступное время в боте."
+                ),
+            )
+            notification_sent = True
+        except Exception:
+            notification_sent = False
+
+    if notification_sent:
+        await callback.message.edit_text(
+            "Занятие отменено. Клиенту отправлено уведомление."
+        )
+    else:
+        await callback.message.edit_text(
+            "Занятие отменено, но уведомление клиенту отправить не удалось."
+        )
