@@ -33,3 +33,82 @@ def slot_duration_keyboard() -> InlineKeyboardMarkup:
             ],
         ]
     )
+
+def coach_slots_keyboard(slots: list[AvailabilitySlot]) -> InlineKeyboardMarkup:
+    keyboard = []
+
+    for slot in slots:
+        starts_at = str(slot.starts_at)
+        status_text = {
+            "available": "свободен",
+            "booked": "занят",
+            "cancelled": "отменен",
+        }.get(slot.status, slot.status)
+
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{starts_at} — {status_text}",
+                    callback_data=f"schedule:open_slot:{slot.id}",
+                )
+            ]
+        )
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def available_slot_management_keyboard(slot_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🗑 Удалить свободный слот",
+                    callback_data=f"schedule:delete_available:{slot_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Назад к слотам",
+                    callback_data="schedule:list_slots",
+                )
+            ],
+        ]
+    )
+
+
+def booked_slot_management_keyboard(slot_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="❌ Отменить занятие и уведомить клиента",
+                    callback_data=f"schedule:cancel_booked:{slot_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Назад к слотам",
+                    callback_data="schedule:list_slots",
+                )
+            ],
+        ]
+    )
+
+
+def confirm_cancel_booked_slot_keyboard(slot_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Да, отменить",
+                    callback_data=f"schedule:confirm_cancel_booked:{slot_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Назад",
+                    callback_data=f"schedule:open_slot:{slot_id}",
+                )
+            ],
+        ]
+    )
