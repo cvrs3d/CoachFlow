@@ -35,8 +35,11 @@ class BookSlotResult:
     client_display_name: str | None = None
     coach_timezone: str | None = None
 
-async def get_active_client_context(telegram_id: int) -> ClientContext | None:
-    async with AsyncSessionLocal() as session:
+async def get_active_client_context(
+    telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> ClientContext | None:
+    async with session_factory() as session:
         user_result = await session.execute(
             select(User).where(User.telegram_id == telegram_id)
         )
@@ -81,13 +84,14 @@ async def get_active_client_context(telegram_id: int) -> ClientContext | None:
 async def list_available_slots_for_client(
     telegram_id: int,
     limit: int = 10,
+    session_factory=AsyncSessionLocal,
 ) -> list[AvailabilitySlot]:
     context = await get_active_client_context(telegram_id)
 
     if context is None:
         return []
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         result = await session.execute(
             select(AvailabilitySlot)
             .where(AvailabilitySlot.coach_id == context.coach.id)
@@ -104,13 +108,14 @@ async def book_slot_for_client(
     *,
     telegram_id: int,
     slot_id: str,
+    session_factory=AsyncSessionLocal,
 ) -> BookSlotResult:
     context = await get_active_client_context(telegram_id)
 
     if context is None:
         return BookSlotResult(ok=False, reason="client_not_found")
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         await session.execute(text("BEGIN IMMEDIATE"))
 
         try:

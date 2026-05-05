@@ -17,8 +17,11 @@ class CurrentUser:
     client: Client | None = None
 
 
-async def get_current_user_by_telegram_id(telegram_id: int) -> CurrentUser | None:
-    async with AsyncSessionLocal() as session:
+async def get_current_user_by_telegram_id(
+    telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> CurrentUser | None:
+    async with session_factory() as session:
         user_result = await session.execute(
             select(User).where(User.telegram_id == telegram_id)
         )
@@ -40,8 +43,11 @@ async def get_current_user_by_telegram_id(telegram_id: int) -> CurrentUser | Non
         return CurrentUser(user=user, coach=coach, client=client)
 
 
-async def activate_user_after_consent(telegram_id: int) -> bool:
-    async with AsyncSessionLocal() as session:
+async def activate_user_after_consent(
+    telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> bool:
+    async with session_factory() as session:
         user_result = await session.execute(
             select(User).where(User.telegram_id == telegram_id)
         )
@@ -85,8 +91,9 @@ async def activate_user_after_consent(telegram_id: int) -> bool:
 async def set_client_display_name(
     telegram_id: int,
     display_name: str,
+    session_factory=AsyncSessionLocal,
 ) -> bool:
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         user_result = await session.execute(
             select(User).where(User.telegram_id == telegram_id)
         )

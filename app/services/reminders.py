@@ -9,7 +9,10 @@ from app.db.models import Appointment, AvailabilitySlot, Client, Coach, User
 
 from app.utils.datetime import format_slot_range_for_timezone
 
-async def send_appointment_24h_reminders(bot: Bot) -> None:
+async def send_appointment_24h_reminders(
+    bot: Bot,
+    session_factory=AsyncSessionLocal,
+) -> None:
     """
     Ищет занятия, которые начнутся примерно через 24 часа,
     отправляет клиенту уведомление и помечает appointment как обработанный.
@@ -27,7 +30,7 @@ async def send_appointment_24h_reminders(bot: Bot) -> None:
     ClientUser = aliased(User)
     CoachUser = aliased(User)
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         result = await session.execute(
             select(Appointment, AvailabilitySlot, Client, Coach, User)
             .join(AvailabilitySlot, Appointment.slot_id == AvailabilitySlot.id)

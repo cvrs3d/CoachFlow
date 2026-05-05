@@ -38,13 +38,14 @@ async def list_coach_manageable_slots(
     *,
     telegram_id: int,
     limit: int = 20,
+    session_factory=AsyncSessionLocal,
 ) -> list[AvailabilitySlot]:
     coach = await get_coach_by_telegram_id(telegram_id)
 
     if coach is None:
         return []
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         result = await session.execute(
             select(AvailabilitySlot)
             .where(AvailabilitySlot.coach_id == coach.id)
@@ -61,13 +62,14 @@ async def get_slot_card_for_coach(
     *,
     telegram_id: int,
     slot_id: str,
+    session_factory=AsyncSessionLocal,
 ) -> CoachSlotCard | None:
     coach = await get_coach_by_telegram_id(telegram_id)
 
     if coach is None:
         return None
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         slot_result = await session.execute(
             select(AvailabilitySlot)
             .where(AvailabilitySlot.id == slot_id)
@@ -109,13 +111,14 @@ async def delete_available_slot_for_coach(
     *,
     telegram_id: int,
     slot_id: str,
+    session_factory=AsyncSessionLocal,
 ) -> bool:
     coach = await get_coach_by_telegram_id(telegram_id)
 
     if coach is None:
         return False
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         await session.execute(text("BEGIN IMMEDIATE"))
 
         try:
@@ -145,13 +148,14 @@ async def cancel_booked_slot_for_coach(
     *,
     telegram_id: int,
     slot_id: str,
+    session_factory=AsyncSessionLocal,
 ) -> CancelBookedSlotResult:
     coach = await get_coach_by_telegram_id(telegram_id)
 
     if coach is None:
         return CancelBookedSlotResult(ok=False, reason="coach_not_found")
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         await session.execute(text("BEGIN IMMEDIATE"))
 
         try:

@@ -44,11 +44,12 @@ async def create_availability_slot(
     coach_id: str,
     starts_at: datetime,
     duration_minutes: int,
+    session_factory=AsyncSessionLocal,
 ) -> CreateSlotResult:
     starts_at = starts_at.astimezone(timezone.utc)
     ends_at = starts_at + timedelta(minutes=duration_minutes)
     
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         await session.execute(text("BEGIN IMMEDIATE"))
 
         try:
@@ -100,8 +101,9 @@ async def list_coach_slots(
     *,
     coach_id: str,
     limit: int = 10,
+    session_factory=AsyncSessionLocal,
 ) -> list[AvailabilitySlot]:
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         result = await session.execute(
             select(AvailabilitySlot)
             .where(AvailabilitySlot.coach_id == coach_id)

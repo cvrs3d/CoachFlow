@@ -17,8 +17,11 @@ class ClientCard:
     future_appointments_count: int
 
 
-async def get_coach_by_telegram_id(telegram_id: int) -> Coach | None:
-    async with AsyncSessionLocal() as session:
+async def get_coach_by_telegram_id(
+    telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> Coach | None:
+    async with session_factory() as session:
         result = await session.execute(
             select(Coach)
             .join(User, Coach.user_id == User.id)
@@ -30,8 +33,11 @@ async def get_coach_by_telegram_id(telegram_id: int) -> Coach | None:
         return result.scalar_one_or_none()
 
 
-async def list_clients_for_coach(telegram_id: int) -> list[Client]:
-    async with AsyncSessionLocal() as session:
+async def list_clients_for_coach(
+    telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> list[Client]:
+    async with session_factory() as session:
         coach_result = await session.execute(
             select(Coach)
             .join(User, Coach.user_id == User.id)
@@ -60,8 +66,9 @@ async def get_client_card_for_coach(
     *,
     telegram_id: int,
     client_id: str,
+    session_factory=AsyncSessionLocal,
 ) -> ClientCard | None:
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         coach_result = await session.execute(
             select(Coach)
             .join(User, Coach.user_id == User.id)
@@ -110,8 +117,9 @@ async def update_client_display_name_for_coach(
     telegram_id: int,
     client_id: str,
     new_display_name: str,
+    session_factory=AsyncSessionLocal,
 ) -> bool:
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         coach_result = await session.execute(
             select(Coach)
             .join(User, Coach.user_id == User.id)
@@ -161,8 +169,9 @@ async def deactivate_client_for_coach(
     *,
     telegram_id: int,
     client_id: str,
+    session_factory=AsyncSessionLocal,
 ) -> bool:
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         coach_result = await session.execute(
             select(Coach)
             .join(User, Coach.user_id == User.id)

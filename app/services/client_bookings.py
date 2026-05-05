@@ -44,8 +44,11 @@ class ClientContext:
     coach: Coach
 
 
-async def get_active_client_context(telegram_id: int) -> ClientContext | None:
-    async with AsyncSessionLocal() as session:
+async def get_active_client_context(
+    telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> ClientContext | None:
+    async with session_factory() as session:
         user_result = await session.execute(
             select(User).where(User.telegram_id == telegram_id)
         )
@@ -91,13 +94,14 @@ async def list_future_bookings_for_client(
     *,
     telegram_id: int,
     limit: int = 10,
+    session_factory=AsyncSessionLocal,
 ) -> list[tuple[Appointment, AvailabilitySlot]]:
     context = await get_active_client_context(telegram_id)
 
     if context is None:
         return []
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         result = await session.execute(
             select(Appointment, AvailabilitySlot)
             .join(AvailabilitySlot, Appointment.slot_id == AvailabilitySlot.id)
@@ -115,13 +119,14 @@ async def get_client_booking_card(
     *,
     telegram_id: int,
     appointment_id: str,
+    session_factory=AsyncSessionLocal,
 ) -> ClientBookingCard | None:
     context = await get_active_client_context(telegram_id)
 
     if context is None:
         return None
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         result = await session.execute(
             select(Appointment, AvailabilitySlot, Coach, User)
             .join(AvailabilitySlot, Appointment.slot_id == AvailabilitySlot.id)
@@ -157,13 +162,14 @@ async def cancel_booking_by_client(
     *,
     telegram_id: int,
     appointment_id: str,
+    session_factory=AsyncSessionLocal,
 ) -> CancelClientBookingResult:
     context = await get_active_client_context(telegram_id)
 
     if context is None:
         return CancelClientBookingResult(ok=False, reason="client_not_found")
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         await session.execute(text("BEGIN IMMEDIATE"))
 
         try:

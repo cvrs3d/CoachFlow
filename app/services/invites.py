@@ -21,8 +21,11 @@ def generate_invite_code() -> str:
     return secrets.token_urlsafe(12).replace("-", "_")[:16]
 
 
-async def get_coach_by_telegram_id(telegram_id: int) -> Coach | None:
-    async with AsyncSessionLocal() as session:
+async def get_coach_by_telegram_id(
+    telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> Coach | None:
+    async with session_factory() as session:
         result = await session.execute(
             select(Coach)
             .join(User, Coach.user_id == User.id)
@@ -30,6 +33,7 @@ async def get_coach_by_telegram_id(telegram_id: int) -> Coach | None:
             .where(User.role == "coach")
             .where(User.status == "active")
         )
+
         return result.scalar_one_or_none()
 
 
@@ -37,8 +41,9 @@ async def create_invite_for_coach(
     coach_id: str,
     max_uses: int = 1,
     expires_in_days: int = 7,
+    session_factory=AsyncSessionLocal,
 ) -> InviteCode:
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         # На случай редкого collision пробуем несколько раз
         for _ in range(5):
             code = generate_invite_code()
@@ -71,8 +76,9 @@ async def create_invite_for_coach(
     coach_id: str,
     max_uses: int = 1,
     expires_in_days: int = 7,
+    session_factory=AsyncSessionLocal,
 ) -> InviteCode:
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         for _ in range(5):
             code = generate_invite_code()
 
@@ -114,6 +120,7 @@ async def redeem_invite_code(
     code: str,
     telegram_id: int,
     username: str | None,
+    session_factory=AsyncSessionLocal,
 ) -> RedeemInviteResult:
     """
     Активирует invite-ссылку и создает клиента.
@@ -124,7 +131,7 @@ async def redeem_invite_code(
     - клиент создается в той же транзакции
     """
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         await session.execute(text("BEGIN IMMEDIATE"))
 
         try:
