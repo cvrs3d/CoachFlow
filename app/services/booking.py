@@ -86,7 +86,7 @@ async def list_available_slots_for_client(
     limit: int = 10,
     session_factory=AsyncSessionLocal,
 ) -> list[AvailabilitySlot]:
-    context = await get_active_client_context(telegram_id)
+    context = await get_active_client_context(telegram_id, session_factory=session_factory)
 
     if context is None:
         return []
@@ -110,7 +110,7 @@ async def book_slot_for_client(
     slot_id: str,
     session_factory=AsyncSessionLocal,
 ) -> BookSlotResult:
-    context = await get_active_client_context(telegram_id)
+    context = await get_active_client_context(telegram_id, session_factory=session_factory)
 
     if context is None:
         return BookSlotResult(ok=False, reason="client_not_found")

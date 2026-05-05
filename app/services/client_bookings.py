@@ -96,7 +96,7 @@ async def list_future_bookings_for_client(
     limit: int = 10,
     session_factory=AsyncSessionLocal,
 ) -> list[tuple[Appointment, AvailabilitySlot]]:
-    context = await get_active_client_context(telegram_id)
+    context = await get_active_client_context(telegram_id, session_factory=session_factory)
 
     if context is None:
         return []
@@ -121,7 +121,7 @@ async def get_client_booking_card(
     appointment_id: str,
     session_factory=AsyncSessionLocal,
 ) -> ClientBookingCard | None:
-    context = await get_active_client_context(telegram_id)
+    context = await get_active_client_context(telegram_id, session_factory=session_factory)
 
     if context is None:
         return None
@@ -164,7 +164,7 @@ async def cancel_booking_by_client(
     appointment_id: str,
     session_factory=AsyncSessionLocal,
 ) -> CancelClientBookingResult:
-    context = await get_active_client_context(telegram_id)
+    context = await get_active_client_context(telegram_id, session_factory=session_factory)
 
     if context is None:
         return CancelClientBookingResult(ok=False, reason="client_not_found")

@@ -30,13 +30,21 @@ async def send_appointment_24h_reminders(
     ClientUser = aliased(User)
     CoachUser = aliased(User)
 
-    async with session_factory() as session:
+    async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Appointment, AvailabilitySlot, Client, Coach, User)
+            select(
+                Appointment,
+                AvailabilitySlot,
+                Client,
+                Coach,
+                ClientUser,
+                CoachUser,
+            )
             .join(AvailabilitySlot, Appointment.slot_id == AvailabilitySlot.id)
             .join(Client, Appointment.client_id == Client.id)
             .join(Coach, Appointment.coach_id == Coach.id)
-            .join(User, Client.user_id == User.id)
+            .join(ClientUser, Client.user_id == ClientUser.id)
+            .join(CoachUser, Coach.user_id == CoachUser.id)
             .where(Appointment.status == "booked")
             .where(Appointment.reminder_24h_sent_at.is_(None))
             .where(AvailabilitySlot.starts_at >= window_start)
