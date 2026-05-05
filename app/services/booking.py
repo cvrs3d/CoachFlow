@@ -31,6 +31,9 @@ class BookSlotResult:
     starts_at: str | None = None
     ends_at: str | None = None
 
+    coach_telegram_id: int | None = None
+    client_display_name: str | None = None
+    coach_timezone: str | None = None
 
 async def get_active_client_context(telegram_id: int) -> ClientContext | None:
     async with AsyncSessionLocal() as session:
@@ -140,15 +143,32 @@ async def book_slot_for_client(
             starts_at = slot_row["starts_at"]
             ends_at = slot_row["ends_at"]
             
-            appointment = Appointment(
-                id=str(uuid.uuid4()),
-                slot_id=slot_row["id"],
-                coach_id=context.coach.id,
-                client_id=context.client.id,
-                status="booked",
+            existing_appointment_result = await session.execute(
+                select(Appointment).where(Appointment.slot_id == slot_row["id"])
             )
+            existing_appointment = existing_appointment_result.scalar_one_or_none()
 
-            session.add(appointment)
+            if existing_appointment is None:
+                appointment = Appointment(
+                    id=str(uuid.uuid4()),
+                    slot_id=slot_row["id"],
+                    coach_id=context.coach.id,
+                    client_id=context.client.id,
+                    status="booked",
+                    reminder_24h_sent_at=None,
+                )
+                session.add(appointment)
+            else:
+                appointment = existing_appointment
+                appointment.coach_id = context.coach.id
+                appointment.client_id = context.client.id
+                appointment.status = "booked"
+                appointment.reminder_24h_sent_at = None
+
+            coach_user_result = await session.execute(
+            select(User).where(User.id == context.coach.user_id)
+            )
+            coach_user = coach_user_result.scalar_one_or_none()
 
             await safe_commit(session)
 
@@ -158,6 +178,9 @@ async def book_slot_for_client(
                 slot_id=slot_row["id"],
                 starts_at=str(slot_row["starts_at"]),
                 ends_at=str(slot_row["ends_at"]),
+                coach_telegram_id=coach_user.telegram_id if coach_user else None,
+                client_display_name=context.client.display_name,
+                coach_timezone=context.coach.timezone,
             )
 
         except Exception:

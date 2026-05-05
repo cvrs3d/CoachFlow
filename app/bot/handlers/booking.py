@@ -69,6 +69,23 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
             f"Время: {slot_time}\n"
             f"Часовой пояс: {timezone_name}"
         )
+
+        if result.coach_telegram_id is not None:
+            try:
+                await callback.bot.send_message(
+                    chat_id=result.coach_telegram_id,
+                    text=(
+                        "Новая запись.\n\n"
+                        f"Клиент: {result.client_display_name or 'без имени'}\n"
+                        f"Время: {slot_time}\n"
+                        f"Часовой пояс: {timezone_name}"
+                    ),
+                )
+            except Exception:
+                # Пока не ломаем клиентский flow, если уведомление не ушло.
+                # Позже лучше логировать это в notification_logs.
+                pass
+                
         return
 
     if result.reason == "slot_not_available":
