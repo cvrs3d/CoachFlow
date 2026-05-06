@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from datetime import timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from app.db.models import AvailabilitySlot
 
@@ -126,3 +127,80 @@ def confirm_cancel_booked_slot_keyboard(slot_id: str) -> InlineKeyboardMarkup:
             ],
         ]
     )
+
+
+def slot_date_keyboard(
+    timezone_name: str = "Europe/Prague",
+    days_count: int = 4,
+) -> InlineKeyboardMarkup:
+    today = datetime.now(ZoneInfo(timezone_name)).date()
+
+    labels = [
+        "Сегодня",
+        "Завтра",
+        "Послезавтра",
+        "+3 дня",
+    ]
+
+    keyboard = []
+
+    for offset in range(days_count):
+        target_date = today + timedelta(days=offset)
+        label = labels[offset] if offset < len(labels) else f"+{offset} дней"
+
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{label} · {target_date.strftime('%d.%m')}",
+                    callback_data=f"sd:{target_date.isoformat()}", # sd = schedule date
+                )
+            ]
+        )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                text="✍️ Ввести дату вручную",
+                callback_data="sd:manual",
+            )
+        ]
+    )
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def slot_time_keyboard(
+    start_hour: int = 10,
+    end_hour: int = 18,
+) -> InlineKeyboardMarkup:
+    keyboard = []
+
+    row = []
+
+    for hour in range(start_hour, end_hour + 1):
+        time_text = f"{hour:02d}:00"
+
+        row.append(
+            InlineKeyboardButton(
+                text=time_text,
+                callback_data=f"st:{time_text}", # st = schedule time.
+            )
+        )
+
+        if len(row) == 3:
+            keyboard.append(row)
+            row = []
+
+    if row:
+        keyboard.append(row)
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                text="✍️ Ввести время вручную",
+                callback_data="st:manual",
+            )
+        ]
+    )
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)

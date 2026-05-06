@@ -9,6 +9,10 @@ from app.db.models import Appointment, AvailabilitySlot, Client, Coach, User
 
 from app.utils.datetime import format_slot_range_for_timezone
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 async def send_appointment_24h_reminders(
     bot: Bot,
     session_factory=AsyncSessionLocal,
@@ -21,8 +25,8 @@ async def send_appointment_24h_reminders(
     """
 
     now = datetime.now(timezone.utc)
-    window_start = now + timedelta(hours=23, minutes=50)
-    window_end = now + timedelta(hours=24, minutes=10)
+    window_start = now + timedelta(hours=23)
+    window_end = now + timedelta(hours=25)
     # -----------------TEST------------------ # 
     # window_start = now + timedelta(minutes=1)
     # window_end = now + timedelta(minutes=5)
@@ -30,7 +34,7 @@ async def send_appointment_24h_reminders(
     ClientUser = aliased(User)
     CoachUser = aliased(User)
 
-    async with AsyncSessionLocal() as session:
+    async with session_factory() as session:
         result = await session.execute(
             select(
                 Appointment,
@@ -51,7 +55,16 @@ async def send_appointment_24h_reminders(
             .where(AvailabilitySlot.starts_at < window_end)
         )
 
+        logger.info("24h reminders job started at %s", now.isoformat())
+
         rows = result.all()
+
+        logger.info(
+            "24h reminders found rows=%s window_start=%s window_end=%s",
+            len(rows),
+            window_start.isoformat(),
+            window_end.isoformat(),
+        )
 
 
         for appointment, slot, client, coach, client_user, coach_user in rows:
@@ -75,8 +88,14 @@ async def send_appointment_24h_reminders(
                 )
                 client_sent = True
             except Exception:
-                # Позже лучше писать это в job_execution_logs/security logs.
-                pass
+                logger.exception(
+                    "Failed to send 24h reminder to client",
+                    extra={
+                        "appointment_id": appointment.id,
+                        "client_user_id": client_user.id,
+                        "telegram_id": client_user.telegram_id,
+                    },
+                )
 
             try:
                 await bot.send_message(
@@ -89,9 +108,16 @@ async def send_appointment_24h_reminders(
                     ),
                 )
                 coach_sent = True
+
             except Exception:
-                # Позже лучше писать это в job_execution_logs/security logs.
-                pass
+                logger.exception(
+                    "Failed to send 24h reminder to coach",
+                    extra={
+                        "appointment_id": appointment.id,
+                        "coach_user_id": coach_user.id,
+                        "telegram_id": coach_user.telegram_id,
+                    },
+                )
 
             # В MVP помечаем как отправленное, если хотя бы одно сообщение ушло.
             # Иначе задача будет пытаться отправить снова при следующем запуске.

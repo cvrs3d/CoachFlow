@@ -10,7 +10,9 @@ from app.bot.keyboards.schedule import (
     coach_schedule_keyboard,
     coach_slots_keyboard,
     confirm_cancel_booked_slot_keyboard,
+    slot_date_keyboard,
     slot_duration_keyboard,
+    slot_time_keyboard,
 )
 
 from app.services.schedule_management import (
@@ -58,11 +60,40 @@ async def add_slot_start_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_date)
 
     await callback.message.answer(
-        "Введите дату слота в формате YYYY-MM-DD.\n\n"
-        "Например: 2026-05-10"
+        f"Выберите дату слота.\n\n"
+        f"Часовой пояс: {coach.timezone}",
+        reply_markup=slot_date_keyboard(coach.timezone),
     )
 
     await callback.answer()
+
+@router.callback_query(
+    ScheduleStates.waiting_for_slot_date,
+    F.data.startswith("sd:"),
+)
+async def process_slot_date_button_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
+    date_value = callback.data.split(":", 1)[1]
+
+    await callback.answer()
+
+    if date_value == "manual":
+        await callback.message.answer(
+            "Введите дату слота в формате YYYY-MM-DD.\n\n"
+            "Например: 2026-05-10"
+        )
+        return
+
+    await state.update_data(slot_date=date_value)
+    await state.set_state(ScheduleStates.waiting_for_slot_start_time)
+
+    await callback.message.edit_text(
+        f"Дата выбрана: {date_value}\n\n"
+        "Теперь выберите время начала:",
+        reply_markup=slot_time_keyboard(start_hour=10, end_hour=18),
+    )
 
 
 @router.message(ScheduleStates.waiting_for_slot_date)
@@ -85,10 +116,39 @@ async def process_slot_date_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_start_time)
 
     await message.answer(
-        "Введите время начала в формате HH:MM.\n\n"
-        "Например: 14:30"
+        "Дата сохранена.\n\n"
+        "Теперь выберите время начала:",
+        reply_markup=slot_time_keyboard(start_hour=10, end_hour=18),
     )
 
+
+@router.callback_query(
+    ScheduleStates.waiting_for_slot_start_time,
+    F.data.startswith("st:"),
+)
+async def process_slot_time_button_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
+    time_value = callback.data.split(":", 1)[1]
+
+    await callback.answer()
+
+    if time_value == "manual":
+        await callback.message.answer(
+            "Введите время начала в формате HH:MM.\n\n"
+            "Например: 14:30"
+        )
+        return
+
+    await state.update_data(slot_start_time=time_value)
+    await state.set_state(ScheduleStates.waiting_for_slot_duration)
+
+    await callback.message.edit_text(
+        f"Время выбрано: {time_value}\n\n"
+        "Выберите длительность слота:",
+        reply_markup=slot_duration_keyboard(),
+    )
 
 @router.message(ScheduleStates.waiting_for_slot_start_time)
 async def process_slot_start_time_handler(
@@ -110,6 +170,7 @@ async def process_slot_start_time_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_duration)
 
     await message.answer(
+        "Время сохранено.\n\n"
         "Выберите длительность слота:",
         reply_markup=slot_duration_keyboard(),
     )

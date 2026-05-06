@@ -37,39 +37,39 @@ async def get_coach_by_telegram_id(
         return result.scalar_one_or_none()
 
 
-async def create_invite_for_coach(
-    coach_id: str,
-    max_uses: int = 1,
-    expires_in_days: int = 7,
-    session_factory=AsyncSessionLocal,
-) -> InviteCode:
-    async with session_factory() as session:
-        # На случай редкого collision пробуем несколько раз
-        for _ in range(5):
-            code = generate_invite_code()
+# async def create_invite_for_coach(
+#     coach_id: str,
+#     max_uses: int = 1,
+#     expires_in_days: int = 7,
+#     session_factory=AsyncSessionLocal,
+# ) -> InviteCode:
+#     async with session_factory() as session:
+#         # На случай редкого collision пробуем несколько раз
+#         for _ in range(5):
+#             code = generate_invite_code()
 
-            existing = await session.execute(
-                select(InviteCode).where(InviteCode.code == code)
-            )
-            if existing.scalar_one_or_none() is not None:
-                continue
+#             existing = await session.execute(
+#                 select(InviteCode).where(InviteCode.code == code)
+#             )
+#             if existing.scalar_one_or_none() is not None:
+#                 continue
 
-            invite = InviteCode(
-                id=str(uuid.uuid4()),
-                code=code,
-                coach_id=coach_id,
-                status="active",
-                max_uses=max_uses,
-                used_count=0,
-                expires_at=datetime.now(timezone.utc) + timedelta(days=expires_in_days),
-            )
+#             invite = InviteCode(
+#                 id=str(uuid.uuid4()),
+#                 code=code,
+#                 coach_id=coach_id,
+#                 status="active",
+#                 max_uses=max_uses,
+#                 used_count=0,
+#                 expires_at=datetime.now(timezone.utc) + timedelta(days=expires_in_days),
+#             )
 
-            session.add(invite)
-            await safe_commit(session)
-            await session.refresh(invite)
-            return invite
+#             session.add(invite)
+#             await safe_commit(session)
+#             await session.refresh(invite)
+#             return invite
 
-        raise RuntimeError("Could not generate unique invite code")
+#         raise RuntimeError("Could not generate unique invite code")
 
 
 async def create_invite_for_coach(

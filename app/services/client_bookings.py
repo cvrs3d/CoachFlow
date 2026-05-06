@@ -112,7 +112,10 @@ async def list_future_bookings_for_client(
             .limit(limit)
         )
 
-        return list(result.all())
+        return [
+            (appointment, slot)
+            for appointment, slot in result.all()
+        ]
 
 
 async def get_client_booking_card(
