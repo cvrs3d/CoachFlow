@@ -11,9 +11,9 @@ from app.db.models import (
     Coach,
     MealReport,
     MealReportPhoto,
+    MealReview,
     User,
 )
-
 
 @dataclass
 class ClientMealContext:
@@ -32,6 +32,29 @@ class CreateMealReportResult:
     client_display_name: str | None = None
     meal_type: str | None = None
     submitted_at: datetime | None = None
+
+@dataclass
+class CoachMealContext:
+    user: User
+    coach: Coach
+
+
+@dataclass
+class MealReportCard:
+    report: MealReport
+    photo: MealReportPhoto
+    client: Client
+    client_user: User
+
+
+@dataclass
+class ReviewMealReportResult:
+    ok: bool
+    reason: str | None = None
+    client_telegram_id: int | None = None
+    client_display_name: str | None = None
+    verdict: str | None = None
+    report_status: str | None = None
 
 
 async def get_active_client_meal_context(
@@ -148,6 +171,177 @@ async def create_meal_report_from_photo(
                 client_display_name=context.client.display_name,
                 meal_type=meal_type,
                 submitted_at=submitted_at,
+            )
+
+        except Exception:
+            await session.rollback()
+            raise
+
+async def get_active_coach_meal_context(
+    telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> CoachMealContext | None:
+    async with session_factory() as session:
+        result = await session.execute(
+            select(Coach, User)
+            .join(User, Coach.user_id == User.id)
+            .where(User.telegram_id == telegram_id)
+            .where(User.role == "coach")
+            .where(User.status == "active")
+        )
+
+        row = result.one_or_none()
+
+        if row is None:
+            return None
+
+        coach, user = row
+
+        return CoachMealContext(
+            user=user,
+            coach=coach,
+        )
+
+
+async def list_pending_meal_reports_for_coach(
+    *,
+    telegram_id: int,
+    limit: int = 10,
+    session_factory=AsyncSessionLocal,
+) -> list[tuple[MealReport, Client]]:
+    context = await get_active_coach_meal_context(
+        telegram_id,
+        session_factory=session_factory,
+    )
+
+    if context is None:
+        return []
+
+    async with session_factory() as session:
+        result = await session.execute(
+            select(MealReport, Client)
+            .join(Client, MealReport.client_id == Client.id)
+            .where(MealReport.coach_id == context.coach.id)
+            .where(MealReport.status.in_(["submitted", "in_review"]))
+            .order_by(MealReport.submitted_at.asc())
+            .limit(limit)
+        )
+
+        return list(result.all())
+
+
+async def get_meal_report_for_coach(
+    *,
+    telegram_id: int,
+    report_id: str,
+    session_factory=AsyncSessionLocal,
+) -> MealReportCard | None:
+    context = await get_active_coach_meal_context(
+        telegram_id,
+        session_factory=session_factory,
+    )
+
+    if context is None:
+        return None
+
+    async with session_factory() as session:
+        result = await session.execute(
+            select(MealReport, MealReportPhoto, Client, User)
+            .join(MealReportPhoto, MealReportPhoto.report_id == MealReport.id)
+            .join(Client, MealReport.client_id == Client.id)
+            .join(User, Client.user_id == User.id)
+            .where(MealReport.id == report_id)
+            .where(MealReport.coach_id == context.coach.id)
+        )
+
+        row = result.one_or_none()
+
+        if row is None:
+            return None
+
+        report, photo, client, client_user = row
+
+        return MealReportCard(
+            report=report,
+            photo=photo,
+            client=client,
+            client_user=client_user,
+        )
+
+
+async def review_meal_report(
+    *,
+    telegram_id: int,
+    report_id: str,
+    verdict: str,
+    session_factory=AsyncSessionLocal,
+) -> ReviewMealReportResult:
+    verdict_to_report_status = {
+        "ok": "reviewed",
+        "needs_improvement": "reviewed",
+        "question": "needs_clarification",
+    }
+
+    if verdict not in verdict_to_report_status:
+        return ReviewMealReportResult(ok=False, reason="invalid_verdict")
+
+    context = await get_active_coach_meal_context(
+        telegram_id,
+        session_factory=session_factory,
+    )
+
+    if context is None:
+        return ReviewMealReportResult(ok=False, reason="coach_not_found")
+
+    async with session_factory() as session:
+        try:
+            result = await session.execute(
+                select(MealReport, Client, User)
+                .join(Client, MealReport.client_id == Client.id)
+                .join(User, Client.user_id == User.id)
+                .where(MealReport.id == report_id)
+                .where(MealReport.coach_id == context.coach.id)
+            )
+
+            row = result.one_or_none()
+
+            if row is None:
+                return ReviewMealReportResult(ok=False, reason="report_not_found")
+
+            report, client, client_user = row
+
+            if report.status not in ("submitted", "in_review", "needs_clarification"):
+                return ReviewMealReportResult(ok=False, reason="report_already_reviewed")
+
+            existing_review_result = await session.execute(
+                select(MealReview).where(MealReview.report_id == report.id)
+            )
+            existing_review = existing_review_result.scalar_one_or_none()
+
+            if existing_review is not None:
+                return ReviewMealReportResult(ok=False, reason="report_already_reviewed")
+
+            review = MealReview(
+                id=str(uuid.uuid4()),
+                report_id=report.id,
+                coach_id=context.coach.id,
+                verdict=verdict,
+                rating=None,
+                comment=None,
+            )
+            session.add(review)
+
+            report.status = verdict_to_report_status[verdict]
+            report.reviewed_at = datetime.now(timezone.utc)
+
+            await session.commit()
+
+            return ReviewMealReportResult(
+                ok=True,
+                client_telegram_id=client_user.telegram_id,
+                client_display_name=client.display_name,
+                verdict=verdict,
+                report_status=report.status,
             )
 
         except Exception:
