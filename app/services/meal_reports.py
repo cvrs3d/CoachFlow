@@ -55,6 +55,7 @@ class ReviewMealReportResult:
     client_display_name: str | None = None
     verdict: str | None = None
     report_status: str | None = None
+    comment: str | None = None
 
 
 async def get_active_client_meal_context(
@@ -274,6 +275,7 @@ async def review_meal_report(
     telegram_id: int,
     report_id: str,
     verdict: str,
+    comment: str | None = None,
     session_factory=AsyncSessionLocal,
 ) -> ReviewMealReportResult:
     verdict_to_report_status = {
@@ -327,7 +329,7 @@ async def review_meal_report(
                 coach_id=context.coach.id,
                 verdict=verdict,
                 rating=None,
-                comment=None,
+                comment=comment,
             )
             session.add(review)
 
@@ -341,6 +343,7 @@ async def review_meal_report(
                 client_telegram_id=client_user.telegram_id,
                 client_display_name=client.display_name,
                 verdict=verdict,
+                comment=comment,
                 report_status=report.status,
             )
 

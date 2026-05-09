@@ -471,3 +471,102 @@ async def test_report_cannot_be_reviewed_twice(session_factory):
     assert first.ok is True
     assert second.ok is False
     assert second.reason == "report_already_reviewed"
+
+async def test_coach_can_review_report_with_comment(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    assert created.ok is True
+
+    result = await review_meal_report(
+        telegram_id=1001,
+        report_id=created.report_id,
+        verdict="needs_improvement",
+        comment="Добавь больше белка и овощей.",
+        session_factory=session_factory,
+    )
+
+    assert result.ok is True
+    assert result.verdict == "needs_improvement"
+    assert result.report_status == "reviewed"
+    assert result.comment == "Добавь больше белка и овощей."
+
+    async with session_factory() as session:
+        review_result = await session.execute(
+            select(MealReview).where(MealReview.report_id == created.report_id)
+        )
+        review = review_result.scalar_one()
+
+        assert review.verdict == "needs_improvement"
+        assert review.comment == "Добавь больше белка и овощей."
+
+        report_result = await session.execute(
+            select(MealReport).where(MealReport.id == created.report_id)
+        )
+        report = report_result.scalar_one()
+
+        assert report.status == "reviewed"
+        assert report.reviewed_at is not None
+
+async def test_coach_can_ask_question_with_comment(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="dinner",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    result = await review_meal_report(
+        telegram_id=1001,
+        report_id=created.report_id,
+        verdict="question",
+        comment="Что было в соусе?",
+        session_factory=session_factory,
+    )
+
+    assert result.ok is True
+    assert result.verdict == "question"
+    assert result.report_status == "needs_clarification"
+    assert result.comment == "Что было в соусе?"
+
+    async with session_factory() as session:
+        review_result = await session.execute(
+            select(MealReview).where(MealReview.report_id == created.report_id)
+        )
+        review = review_result.scalar_one()
+
+        assert review.verdict == "question"
+        assert review.comment == "Что было в соусе?"
+
+        report_result = await session.execute(
+            select(MealReport).where(MealReport.id == created.report_id)
+        )
+        report = report_result.scalar_one()
+
+        assert report.status == "needs_clarification"

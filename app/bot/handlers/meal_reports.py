@@ -235,26 +235,56 @@ async def review_meal_report_ok_handler(callback: CallbackQuery) -> None:
 
 
 @router.callback_query(F.data.startswith("mr:ni:"))
-async def review_meal_report_needs_improvement_handler(callback: CallbackQuery) -> None:
+async def review_meal_report_needs_improvement_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
     report_id = callback.data.split(":", 2)[2]
-    await process_meal_report_review(callback, report_id, "needs_improvement")
+
+    await state.set_state(MealReportStates.waiting_for_review_comment)
+    await state.update_data(
+        report_id=report_id,
+        verdict="needs_improvement",
+    )
+
+    await callback.answer()
+
+    await callback.message.answer(
+        "Напишите комментарий для клиента: что нужно улучшить?"
+    )
 
 
 @router.callback_query(F.data.startswith("mr:q:"))
-async def review_meal_report_question_handler(callback: CallbackQuery) -> None:
+async def review_meal_report_question_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
     report_id = callback.data.split(":", 2)[2]
-    await process_meal_report_review(callback, report_id, "question")
+
+    await state.set_state(MealReportStates.waiting_for_review_comment)
+    await state.update_data(
+        report_id=report_id,
+        verdict="question",
+    )
+
+    await callback.answer()
+
+    await callback.message.answer(
+        "Напишите вопрос или уточнение для клиента."
+    )
 
 
 async def process_meal_report_review(
     callback: CallbackQuery,
     report_id: str,
     verdict: str,
+    comment: str | None = None,
 ) -> None:
     result = await review_meal_report(
         telegram_id=callback.from_user.id,
         report_id=report_id,
         verdict=verdict,
+        comment=comment,
     )
 
     await callback.answer()
@@ -288,12 +318,81 @@ async def process_meal_report_review(
         await callback.message.answer(f"Отчет проверен: {verdict_label}")
 
     if result.client_telegram_id is not None:
+        client_text = (
+            "Тренер проверил ваш отчет еды.\n\n"
+            f"Результат: {verdict_label}"
+        )
+
+        if result.comment:
+            client_text += f"\n\nКомментарий тренера:\n{result.comment}"
         try:
             await callback.bot.send_message(
                 chat_id=result.client_telegram_id,
+                text=client_text,
+            )
+        except Exception:
+            pass
+
+@router.message(MealReportStates.waiting_for_review_comment)
+async def process_meal_review_comment_handler(
+    message: Message,
+    state: FSMContext,
+) -> None:
+    comment = (message.text or "").strip()
+
+    if len(comment) < 2:
+        await message.answer("Комментарий слишком короткий. Напишите минимум 2 символа.")
+        return
+
+    if len(comment) > 1000:
+        await message.answer("Комментарий слишком длинный. Напишите до 1000 символов.")
+        return
+
+    data = await state.get_data()
+    report_id = data.get("report_id")
+    verdict = data.get("verdict")
+
+    if not report_id or not verdict:
+        await state.clear()
+        await message.answer("Не удалось определить отчет. Откройте отчет заново.")
+        return
+
+    result = await review_meal_report(
+        telegram_id=message.from_user.id,
+        report_id=report_id,
+        verdict=verdict,
+        comment=comment,
+    )
+
+    await state.clear()
+
+    if not result.ok:
+        if result.reason == "report_already_reviewed":
+            await message.answer("Этот отчет уже проверен.")
+            return
+
+        if result.reason == "report_not_found":
+            await message.answer("Отчет не найден или у вас нет доступа.")
+            return
+
+        await message.answer("Не удалось проверить отчет.")
+        return
+
+    verdict_label = VERDICT_LABELS.get(verdict, verdict)
+
+    await message.answer(
+        f"Отчет проверен: {verdict_label}\n\n"
+        f"Комментарий отправлен клиенту:\n{comment}"
+    )
+
+    if result.client_telegram_id is not None:
+        try:
+            await message.bot.send_message(
+                chat_id=result.client_telegram_id,
                 text=(
                     "Тренер проверил ваш отчет еды.\n\n"
-                    f"Результат: {verdict_label}"
+                    f"Результат: {verdict_label}\n\n"
+                    f"Комментарий тренера:\n{comment}"
                 ),
             )
         except Exception:

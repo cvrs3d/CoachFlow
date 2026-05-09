@@ -30,30 +30,6 @@ async def create_invite_button_handler(message: Message) -> None:
     )
 
 
-@router.message(F.text == "🍽 Отчеты еды")
-async def coach_food_reports_handler(message: Message) -> None:
-    current = await get_current_user_by_telegram_id(message.from_user.id)
-
-    if not current or not current.coach or current.user.status != "active":
-        return
-
-    await message.answer("Раздел отчетов еды пока в разработке.")
-
-
-
-@router.message(F.text == "🍽 Отправить фото еды")
-async def client_food_photo_handler(message: Message) -> None:
-    current = await get_current_user_by_telegram_id(message.from_user.id)
-
-    if not current or not current.client or current.user.status != "active":
-        return
-
-    await message.answer(
-        "Отправка фото еды пока в разработке.\n\n"
-        "Скоро бот будет принимать фото и создавать отчет для тренера."
-    )
-
-
 @router.message(F.text == "👤 Мой профиль")
 async def client_profile_handler(message: Message) -> None:
     current = await get_current_user_by_telegram_id(message.from_user.id)
