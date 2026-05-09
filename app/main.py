@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 
 from app.core.config import settings
 from app.bot.handlers import (
+    common,
     booking,
     client_bookings,
     clients,
@@ -32,6 +33,8 @@ async def main() -> None:
     dp = Dispatcher()
 
     scheduler = setup_scheduler(bot)
+
+    dp.include_router(common.router)
 
     dp.include_router(start.router)
     dp.include_router(invites.router)
