@@ -10,6 +10,7 @@ from app.bot.handlers import (
     clients,
     invites,
     menu,
+    meal_reports,
     privacy,
     registration,
     schedule,
@@ -40,6 +41,7 @@ async def main() -> None:
     dp.include_router(booking.router)
     dp.include_router(client_bookings.router)
     dp.include_router(clients.router)
+    dp.include_router(meal_reports.router)
     dp.include_router(menu.router)
 
     for coach_telegram_id in settings.coach_ids:
