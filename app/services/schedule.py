@@ -50,51 +50,50 @@ async def create_availability_slot(
     ends_at = starts_at + timedelta(minutes=duration_minutes)
     
     async with session_factory() as session:
-        await session.execute(text("BEGIN IMMEDIATE"))
-
-        try:
-            # Проверка пересечения:
-            # существующий starts_at < новый ends_at
-            # существующий ends_at > новый starts_at
-            conflict_result = await session.execute(
-                select(AvailabilitySlot)
-                .where(AvailabilitySlot.coach_id == coach_id)
-                .where(AvailabilitySlot.status not in ["cancelled_by_client", "cancelled_by_coach"])
-                .where(AvailabilitySlot.starts_at < ends_at)
-                .where(AvailabilitySlot.ends_at > starts_at)
-                .limit(1)
-            )
-
-            conflict = conflict_result.scalar_one_or_none()
-
-            if conflict is not None:
-                await session.rollback()
-                return CreateSlotResult(
-                    ok=False,
-                    reason="overlap",
+        async with session.begin():
+            try:
+                # Проверка пересечения:
+                # существующий starts_at < новый ends_at
+                # существующий ends_at > новый starts_at
+                conflict_result = await session.execute(
+                    select(AvailabilitySlot)
+                    .where(AvailabilitySlot.coach_id == coach_id)
+                    .where(AvailabilitySlot.status not in ["cancelled_by_client", "cancelled_by_coach"])
+                    .where(AvailabilitySlot.starts_at < ends_at)
+                    .where(AvailabilitySlot.ends_at > starts_at)
+                    .limit(1)
                 )
 
-            slot = AvailabilitySlot(
-                id=str(uuid.uuid4()),
-                coach_id=coach_id,
-                starts_at=starts_at,
-                ends_at=ends_at,
-                status="available",
-            )
+                conflict = conflict_result.scalar_one_or_none()
 
-            session.add(slot)
-            await safe_commit(session)
+                if conflict is not None:
+                    await session.rollback()
+                    return CreateSlotResult(
+                        ok=False,
+                        reason="overlap",
+                    )
 
-            return CreateSlotResult(
-                ok=True,
-                slot_id=slot.id,
-                starts_at=starts_at,
-                ends_at=ends_at,
-            )
+                slot = AvailabilitySlot(
+                    id=str(uuid.uuid4()),
+                    coach_id=coach_id,
+                    starts_at=starts_at,
+                    ends_at=ends_at,
+                    status="available",
+                )
 
-        except Exception:
-            await session.rollback()
-            raise
+                session.add(slot)
+                await safe_commit(session)
+
+                return CreateSlotResult(
+                    ok=True,
+                    slot_id=slot.id,
+                    starts_at=starts_at,
+                    ends_at=ends_at,
+                )
+
+            except Exception:
+                await session.rollback()
+                raise
 
 
 async def list_coach_slots(

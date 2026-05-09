@@ -132,125 +132,127 @@ async def redeem_invite_code(
     """
 
     async with session_factory() as session:
-        await session.execute(text("BEGIN IMMEDIATE"))
-
-        try:
-            # 1. Если пользователь уже активный клиент/тренер — не регистрируем повторно.
-            existing_user_result = await session.execute(
-                select(User).where(User.telegram_id == telegram_id)
-            )
-            existing_user = existing_user_result.scalar_one_or_none()
-
-            if existing_user is not None:
-                if existing_user.status == "active":
-                    await session.rollback()
-                    return RedeemInviteResult(
-                        ok=False,
-                        reason="already_registered",
-                        user_id=existing_user.id,
-                    )
-                if existing_user.status == "pending":
-                    await session.rollback()
-                    return RedeemInviteResult(
-                        ok=False,
-                        reason="pending_consent",
-                        user_id=existing_user.id,
-                    )
-
-            # 2. Атомарно занимаем invite.
-            # SQLite поддерживает RETURNING для UPDATE.
-            # Условие used_count < max_uses не даст использовать ссылку дважды.
-            invite_result = await session.execute(
-                text("""
-                    UPDATE invite_codes
-                    SET used_count = used_count + 1,
-                        status = CASE
-                            WHEN used_count + 1 >= max_uses THEN 'used'
-                            ELSE status
-                        END
-                    WHERE code = :code
-                      AND status = 'active'
-                      AND used_count < max_uses
-                      AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
-                    RETURNING id, coach_id
-                """),
-                {"code": code},
-            )
-
-            invite_row = invite_result.mappings().first()
-
-            if invite_row is None:
-                await session.rollback()
-                return RedeemInviteResult(ok=False, reason="invalid_or_used_invite")
-
-            invite_id = invite_row["id"]
-            coach_id = invite_row["coach_id"]
-
-            # 3. Создаем или обновляем user.
-            if existing_user is None:
-                user = User(
-                    id=str(uuid.uuid4()),
-                    telegram_id=telegram_id,
-                    username=username,
-                    role="client",
-                    status="pending", 
+        async with session.begin():
+            try:
+                # 1. Если пользователь уже активный клиент/тренер — не регистрируем повторно.
+                existing_user_result = await session.execute(
+                    select(User).where(User.telegram_id == telegram_id)
                 )
-                session.add(user)
-                await session.flush()
-            else:
-                user = existing_user
-                user.username = username
-                user.role = "client"
-                user.status = "pending"
-                await session.flush()
+                existing_user = existing_user_result.scalar_one_or_none()
 
-            # 4. Создаем client.
-            client_result = await session.execute(
-                select(Client).where(Client.user_id == user.id)
-            )
-            client = client_result.scalar_one_or_none()
+                if existing_user is not None:
+                    if existing_user.status == "active":
+                        await session.rollback()
+                        return RedeemInviteResult(
+                            ok=False,
+                            reason="already_registered",
+                            user_id=existing_user.id,
+                        )
+                    if existing_user.status == "pending":
+                        await session.rollback()
+                        return RedeemInviteResult(
+                            ok=False,
+                            reason="pending_consent",
+                            user_id=existing_user.id,
+                        )
 
-            if client is None:
-                client = Client(
-                    id=str(uuid.uuid4()),
+                # 2. Атомарно занимаем invite.
+                # SQLite поддерживает RETURNING для UPDATE.
+                # Условие used_count < max_uses не даст использовать ссылку дважды.
+                invite_result = await session.execute(
+                    text("""
+                        UPDATE invite_codes
+                        SET used_count = used_count + 1,
+                            status = CASE
+                                WHEN used_count + 1 >= max_uses THEN 'used'
+                                ELSE status
+                            END
+                        WHERE code = :code
+                        AND status = 'active'
+                        AND used_count < max_uses
+                        AND (expires_at IS NULL OR expires_at > :dtime_now)
+                        RETURNING id, coach_id
+                    """),
+                    {
+                        "code": code,
+                        "dtime_now": datetime.now(timezone.utc),
+                    },
+                )
+
+                invite_row = invite_result.mappings().first()
+
+                if invite_row is None:
+                    await session.rollback()
+                    return RedeemInviteResult(ok=False, reason="invalid_or_used_invite")
+
+                invite_id = invite_row["id"]
+                coach_id = invite_row["coach_id"]
+
+                # 3. Создаем или обновляем user.
+                if existing_user is None:
+                    user = User(
+                        id=str(uuid.uuid4()),
+                        telegram_id=telegram_id,
+                        username=username,
+                        role="client",
+                        status="pending", 
+                    )
+                    session.add(user)
+                    await session.flush()
+                else:
+                    user = existing_user
+                    user.username = username
+                    user.role = "client"
+                    user.status = "pending"
+                    await session.flush()
+
+                # 4. Создаем client.
+                client_result = await session.execute(
+                    select(Client).where(Client.user_id == user.id)
+                )
+                client = client_result.scalar_one_or_none()
+
+                if client is None:
+                    client = Client(
+                        id=str(uuid.uuid4()),
+                        user_id=user.id,
+                        display_name=username,
+                        status="pending",
+                    )
+                    session.add(client)
+                    await session.flush()
+                else:
+                    client.status = "pending"
+                    await session.flush()
+
+                # 5. Связываем client ↔ coach.
+                relation_result = await session.execute(
+                    select(ClientCoachRelation)
+                    .where(ClientCoachRelation.client_id == client.id)
+                    .where(ClientCoachRelation.coach_id == coach_id)
+                )
+                relation = relation_result.scalar_one_or_none()
+
+                if relation is None:
+                    relation = ClientCoachRelation(
+                        id=str(uuid.uuid4()),
+                        client_id=client.id,
+                        coach_id=coach_id,
+                        status="active",
+                    )
+                    session.add(relation)
+                else:
+                    relation.status = "active"
+
+                await safe_commit(session)
+
+                return RedeemInviteResult(
+                    ok=True,
                     user_id=user.id,
-                    display_name=username,
-                    status="pending",
-                )
-                session.add(client)
-                await session.flush()
-            else:
-                client.status = "pending"
-                await session.flush()
-
-            # 5. Связываем client ↔ coach.
-            relation_result = await session.execute(
-                select(ClientCoachRelation)
-                .where(ClientCoachRelation.client_id == client.id)
-                .where(ClientCoachRelation.coach_id == coach_id)
-            )
-            relation = relation_result.scalar_one_or_none()
-
-            if relation is None:
-                relation = ClientCoachRelation(
-                    id=str(uuid.uuid4()),
                     client_id=client.id,
                     coach_id=coach_id,
-                    status="active",
                 )
-                session.add(relation)
-            else:
-                relation.status = "active"
 
-            await safe_commit(session)
-
-            return RedeemInviteResult(
-                ok=True,
-                user_id=user.id,
-                client_id=client.id,
-                coach_id=coach_id,
-            )
-
-        except Exception:
-            await session.rollback()
-            raise
+            except Exception:
+                await session.rollback()
+                raise

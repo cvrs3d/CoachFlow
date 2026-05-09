@@ -173,58 +173,57 @@ async def cancel_booking_by_client(
         return CancelClientBookingResult(ok=False, reason="client_not_found")
 
     async with session_factory() as session:
-        await session.execute(text("BEGIN IMMEDIATE"))
+        async with session.begin():
+            try:
+                result = await session.execute(
+                    select(Appointment, AvailabilitySlot, Coach, User)
+                    .join(AvailabilitySlot, Appointment.slot_id == AvailabilitySlot.id)
+                    .join(Coach, Appointment.coach_id == Coach.id)
+                    .join(User, Coach.user_id == User.id)
+                    .where(Appointment.id == appointment_id)
+                    .where(Appointment.client_id == context.client.id)
+                    .where(Appointment.status == "booked")
+                    .where(AvailabilitySlot.status == "booked")
+                )
 
-        try:
-            result = await session.execute(
-                select(Appointment, AvailabilitySlot, Coach, User)
-                .join(AvailabilitySlot, Appointment.slot_id == AvailabilitySlot.id)
-                .join(Coach, Appointment.coach_id == Coach.id)
-                .join(User, Coach.user_id == User.id)
-                .where(Appointment.id == appointment_id)
-                .where(Appointment.client_id == context.client.id)
-                .where(Appointment.status == "booked")
-                .where(AvailabilitySlot.status == "booked")
-            )
+                row = result.one_or_none()
 
-            row = result.one_or_none()
+                if row is None:
+                    await session.rollback()
+                    return CancelClientBookingResult(ok=False, reason="booking_not_found")
 
-            if row is None:
+                appointment, slot, coach, coach_user = row
+
+                slot_start_utc = ensure_utc(slot.starts_at)
+
+                deadline = timedelta(hours=settings.client_cancellation_deadline_hours)
+
+                if slot_start_utc - datetime.now(timezone.utc) <= deadline:
+                    await session.rollback()
+                    return CancelClientBookingResult(ok=False, reason="too_late")
+
+                appointment.status = "cancelled_by_client"
+
+                # Клиент отменил заранее → слот снова доступен.
+                slot.status = "available"
+                slot.booked_by_client_id = None
+                slot.booked_at = None
+
+                starts_at = slot.starts_at
+                ends_at = slot.ends_at
+                coach_telegram_id = coach_user.telegram_id
+                client_display_name = context.client.display_name
+
+                await safe_commit(session)
+
+                return CancelClientBookingResult(
+                    ok=True,
+                    coach_telegram_id=coach_telegram_id,
+                    client_display_name=client_display_name,
+                    starts_at=starts_at,
+                    ends_at=ends_at,
+                )
+
+            except Exception:
                 await session.rollback()
-                return CancelClientBookingResult(ok=False, reason="booking_not_found")
-
-            appointment, slot, coach, coach_user = row
-
-            slot_start_utc = ensure_utc(slot.starts_at)
-
-            deadline = timedelta(hours=settings.client_cancellation_deadline_hours)
-
-            if slot_start_utc - datetime.now(timezone.utc) <= deadline:
-                await session.rollback()
-                return CancelClientBookingResult(ok=False, reason="too_late")
-
-            appointment.status = "cancelled_by_client"
-
-            # Клиент отменил заранее → слот снова доступен.
-            slot.status = "available"
-            slot.booked_by_client_id = None
-            slot.booked_at = None
-
-            starts_at = slot.starts_at
-            ends_at = slot.ends_at
-            coach_telegram_id = coach_user.telegram_id
-            client_display_name = context.client.display_name
-
-            await safe_commit(session)
-
-            return CancelClientBookingResult(
-                ok=True,
-                coach_telegram_id=coach_telegram_id,
-                client_display_name=client_display_name,
-                starts_at=starts_at,
-                ends_at=ends_at,
-            )
-
-        except Exception:
-            await session.rollback()
-            raise
+                raise

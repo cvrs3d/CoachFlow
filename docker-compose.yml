@@ -3,8 +3,26 @@ services:
     build: .
     env_file:
       - .env
+    working_dir: /app
     environment:
       PYTHONPATH: /app
     volumes:
+      - .:/app
       - ./data:/app/data
+    depends_on:
+      - postgres
     command: python -m app.main
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: coachflow
+      POSTGRES_USER: coachflow
+      POSTGRES_PASSWORD: coachflow_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:

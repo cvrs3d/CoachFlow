@@ -116,78 +116,78 @@ async def book_slot_for_client(
         return BookSlotResult(ok=False, reason="client_not_found")
 
     async with session_factory() as session:
-        await session.execute(text("BEGIN IMMEDIATE"))
-
-        try:
-            # 1. Атомарно занимаем слот.
-            # Если слот уже занят, RETURNING не вернет строку.
-            slot_result = await session.execute(
-                text("""
-                    UPDATE availability_slots
-                    SET status = 'booked',
-                        booked_by_client_id = :client_id,
-                        booked_at = CURRENT_TIMESTAMP
-                    WHERE id = :slot_id
-                      AND coach_id = :coach_id
-                      AND status = 'available'
-                    RETURNING id, starts_at, ends_at
-                """),
-                {
-                    "slot_id": slot_id,
-                    "client_id": context.client.id,
-                    "coach_id": context.coach.id,
-                },
-            )
-
-            slot_row = slot_result.mappings().first()
-
-            if slot_row is None:
-                await session.rollback()
-                return BookSlotResult(ok=False, reason="slot_not_available")
-
-            starts_at = slot_row["starts_at"]
-            ends_at = slot_row["ends_at"]
-            
-            existing_appointment_result = await session.execute(
-                select(Appointment).where(Appointment.slot_id == slot_row["id"])
-            )
-            existing_appointment = existing_appointment_result.scalar_one_or_none()
-
-            if existing_appointment is None:
-                appointment = Appointment(
-                    id=str(uuid.uuid4()),
-                    slot_id=slot_row["id"],
-                    coach_id=context.coach.id,
-                    client_id=context.client.id,
-                    status="booked",
-                    reminder_24h_sent_at=None,
+        async with session.begin():            
+            try:
+                # 1. Атомарно занимаем слот.
+                # Если слот уже занят, RETURNING не вернет строку.
+                slot_result = await session.execute(
+                    text("""
+                        UPDATE availability_slots
+                        SET status = 'booked',
+                            booked_by_client_id = :client_id,
+                            booked_at = :booked_at
+                        WHERE id = :slot_id
+                        AND coach_id = :coach_id
+                        AND status = 'available'
+                        RETURNING id, starts_at, ends_at
+                    """),
+                    {
+                        "slot_id": slot_id,
+                        "client_id": context.client.id,
+                        "coach_id": context.coach.id,
+                        "booked_at": datetime.now(timezone.utc),
+                    },
                 )
-                session.add(appointment)
-            else:
-                appointment = existing_appointment
-                appointment.coach_id = context.coach.id
-                appointment.client_id = context.client.id
-                appointment.status = "booked"
-                appointment.reminder_24h_sent_at = None
 
-            coach_user_result = await session.execute(
-            select(User).where(User.id == context.coach.user_id)
-            )
-            coach_user = coach_user_result.scalar_one_or_none()
+                slot_row = slot_result.mappings().first()
 
-            await safe_commit(session)
+                if slot_row is None:
+                    await session.rollback()
+                    return BookSlotResult(ok=False, reason="slot_not_available")
 
-            return BookSlotResult(
-                ok=True,
-                appointment_id=appointment.id,
-                slot_id=slot_row["id"],
-                starts_at=str(slot_row["starts_at"]),
-                ends_at=str(slot_row["ends_at"]),
-                coach_telegram_id=coach_user.telegram_id if coach_user else None,
-                client_display_name=context.client.display_name,
-                coach_timezone=context.coach.timezone,
-            )
+                starts_at = slot_row["starts_at"]
+                ends_at = slot_row["ends_at"]
+                
+                existing_appointment_result = await session.execute(
+                    select(Appointment).where(Appointment.slot_id == slot_row["id"])
+                )
+                existing_appointment = existing_appointment_result.scalar_one_or_none()
 
-        except Exception:
-            await session.rollback()
-            raise
+                if existing_appointment is None:
+                    appointment = Appointment(
+                        id=str(uuid.uuid4()),
+                        slot_id=slot_row["id"],
+                        coach_id=context.coach.id,
+                        client_id=context.client.id,
+                        status="booked",
+                        reminder_24h_sent_at=None,
+                    )
+                    session.add(appointment)
+                else:
+                    appointment = existing_appointment
+                    appointment.coach_id = context.coach.id
+                    appointment.client_id = context.client.id
+                    appointment.status = "booked"
+                    appointment.reminder_24h_sent_at = None
+
+                coach_user_result = await session.execute(
+                select(User).where(User.id == context.coach.user_id)
+                )
+                coach_user = coach_user_result.scalar_one_or_none()
+
+                await safe_commit(session)
+
+                return BookSlotResult(
+                    ok=True,
+                    appointment_id=appointment.id,
+                    slot_id=slot_row["id"],
+                    starts_at=str(slot_row["starts_at"]),
+                    ends_at=str(slot_row["ends_at"]),
+                    coach_telegram_id=coach_user.telegram_id if coach_user else None,
+                    client_display_name=context.client.display_name,
+                    coach_timezone=context.coach.timezone,
+                )
+
+            except Exception:
+                await session.rollback()
+                raise

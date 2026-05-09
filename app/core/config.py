@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     bot_token: str
     app_env: str = "dev"
-    database_url: str = "sqlite+aiosqlite:///./data/app.db"
+    database_url: str 
 
     coach_telegram_ids: str = ""
 

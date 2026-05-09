@@ -119,29 +119,29 @@ async def delete_available_slot_for_coach(
         return False
 
     async with session_factory() as session:
-        await session.execute(text("BEGIN IMMEDIATE"))
+        async with session.brgin():
 
-        try:
-            result = await session.execute(
-                select(AvailabilitySlot)
-                .where(AvailabilitySlot.id == slot_id)
-                .where(AvailabilitySlot.coach_id == coach.id)
-                .where(AvailabilitySlot.status == "available")
-            )
-            slot = result.scalar_one_or_none()
+            try:
+                result = await session.execute(
+                    select(AvailabilitySlot)
+                    .where(AvailabilitySlot.id == slot_id)
+                    .where(AvailabilitySlot.coach_id == coach.id)
+                    .where(AvailabilitySlot.status == "available")
+                )
+                slot = result.scalar_one_or_none()
 
-            if slot is None:
+                if slot is None:
+                    await session.rollback()
+                    return False
+
+                slot.status = "cancelled"
+
+                await safe_commit(session)
+                return True
+
+            except Exception:
                 await session.rollback()
-                return False
-
-            slot.status = "cancelled"
-
-            await safe_commit(session)
-            return True
-
-        except Exception:
-            await session.rollback()
-            raise
+                raise
 
 
 async def cancel_booked_slot_for_coach(
@@ -156,46 +156,45 @@ async def cancel_booked_slot_for_coach(
         return CancelBookedSlotResult(ok=False, reason="coach_not_found")
 
     async with session_factory() as session:
-        await session.execute(text("BEGIN IMMEDIATE"))
+        async with session.begin():
+            try:
+                result = await session.execute(
+                    select(AvailabilitySlot, Appointment, Client, User)
+                    .join(Appointment, Appointment.slot_id == AvailabilitySlot.id)
+                    .join(Client, Appointment.client_id == Client.id)
+                    .join(User, Client.user_id == User.id)
+                    .where(AvailabilitySlot.id == slot_id)
+                    .where(AvailabilitySlot.coach_id == coach.id)
+                    .where(AvailabilitySlot.status == "booked")
+                    .where(Appointment.status == "booked")
+                )
 
-        try:
-            result = await session.execute(
-                select(AvailabilitySlot, Appointment, Client, User)
-                .join(Appointment, Appointment.slot_id == AvailabilitySlot.id)
-                .join(Client, Appointment.client_id == Client.id)
-                .join(User, Client.user_id == User.id)
-                .where(AvailabilitySlot.id == slot_id)
-                .where(AvailabilitySlot.coach_id == coach.id)
-                .where(AvailabilitySlot.status == "booked")
-                .where(Appointment.status == "booked")
-            )
+                row = result.one_or_none()
 
-            row = result.one_or_none()
+                if row is None:
+                    await session.rollback()
+                    return CancelBookedSlotResult(ok=False, reason="slot_not_found")
 
-            if row is None:
+                slot, appointment, client, client_user = row
+
+                slot.status = "cancelled"
+                appointment.status = "cancelled_by_coach"
+
+                starts_at = str(slot.starts_at)
+                ends_at = str(slot.ends_at)
+                client_telegram_id = client_user.telegram_id
+                client_display_name = client.display_name
+
+                await safe_commit(session)
+
+                return CancelBookedSlotResult(
+                    ok=True,
+                    client_telegram_id=client_telegram_id,
+                    client_display_name=client_display_name,
+                    starts_at=starts_at,
+                    ends_at=ends_at,
+                )
+
+            except Exception:
                 await session.rollback()
-                return CancelBookedSlotResult(ok=False, reason="slot_not_found")
-
-            slot, appointment, client, client_user = row
-
-            slot.status = "cancelled"
-            appointment.status = "cancelled_by_coach"
-
-            starts_at = str(slot.starts_at)
-            ends_at = str(slot.ends_at)
-            client_telegram_id = client_user.telegram_id
-            client_display_name = client.display_name
-
-            await safe_commit(session)
-
-            return CancelBookedSlotResult(
-                ok=True,
-                client_telegram_id=client_telegram_id,
-                client_display_name=client_display_name,
-                starts_at=starts_at,
-                ends_at=ends_at,
-            )
-
-        except Exception:
-            await session.rollback()
-            raise
+                raise
