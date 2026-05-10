@@ -195,6 +195,9 @@ class MealReport(Base):
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    clarification_response: Mapped[str | None] = mapped_column(Text)
+    clarification_responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     __table_args__ = (
         CheckConstraint("meal_type IN ('breakfast', 'lunch', 'dinner', 'snack', 'other')", name="ck_reports_meal_type"),
         CheckConstraint(
