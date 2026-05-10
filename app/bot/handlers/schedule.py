@@ -29,6 +29,7 @@ from app.services.schedule import (
     parse_coach_datetime,
 )
 from app.utils.datetime import format_slot_range_for_timezone, ensure_utc, format_dt_for_timezone
+from app.services.notifications import send_logged_message, SendNotificationResult
 
 router = Router()
 
@@ -421,24 +422,24 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
         timezone_name,
     )
 
-    notification_sent = False
+    notification_sent = None 
 
     if result.client_telegram_id is not None:
-        try:
-            await callback.bot.send_message(
-                chat_id=result.client_telegram_id,
-                text=(
+        notification_sent = await send_logged_message (
+            bot=callback.bot, 
+            chat_id=result.client_telegram_id,
+            text=(
                     "Ваше занятие отменено тренером.\n\n"
                     f"Время: {slot_time}\n"
                     f"Часовой пояс: {timezone_name}\n\n"
                     "Вы можете выбрать другое доступное время в боте."
                 ),
-            )
-            notification_sent = True
-        except Exception:
-            notification_sent = False
+            notification_type="appointment_cancelled_by_coach",
+            related_entity_type="availability_slot",
+            related_entity_id=slot_id,
+        )
 
-    if notification_sent:
+    if notification_sent is not None and notification_sent.ok:
         await callback.message.edit_text(
             "Занятие отменено. Клиенту отправлено уведомление."
         )

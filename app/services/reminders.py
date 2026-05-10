@@ -9,6 +9,8 @@ from app.db.models import Appointment, AvailabilitySlot, Client, Coach, User
 
 from app.utils.datetime import format_slot_range_for_timezone
 
+from app.services.notifications import send_logged_message, SendNotificationResult
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -76,19 +78,24 @@ async def send_appointment_24h_reminders(
             ends_at = slot.ends_at,
             timezone_name = coach.timezone)
 
-            try:
-                await bot.send_message(
-                    chat_id=client_user.telegram_id,
-                    text=(
-                        f"Напоминание о занятии с {'тренером' + coach.display_name or 'тренером'}.\n\n"
-                        f"Занятие состоится завтра:\n"
-                        f"{slot_time}\n\n"
-                        "Если не сможете прийти, свяжитесь с тренером заранее."
-                    ),
-                )
+            notification_client_result = await send_logged_message (
+                bot=bot,
+                chat_id=client_user.telegram_id,
+                text=(
+                    f"Напоминание о занятии с {'тренером' + coach.display_name or 'тренером'}.\n\n"
+                    f"Занятие состоится завтра:\n"
+                    f"{slot_time}\n\n"
+                    "Если не сможете прийти, свяжитесь с тренером заранее."
+                ),
+                notification_type="appointment_reminder_24h_client",
+                related_entity_type="appointment",
+                related_entity_id=appointment.id,
+                session_factory=session_factory,
+            )
+            if notification_client_result and notification_client_result.ok:
                 client_sent = True
-            except Exception:
-                logger.exception(
+            else:
+                logger.info(
                     "Failed to send 24h reminder to client",
                     extra={
                         "appointment_id": appointment.id,
@@ -97,21 +104,25 @@ async def send_appointment_24h_reminders(
                     },
                 )
 
-            try:
-                await bot.send_message(
-                    chat_id=coach_user.telegram_id,
-                    text=(
-                        "Напоминание о занятии с клиентом.\n\n"
-                        f"Клиент: {client.display_name or 'без имени'}\n"
-                        f"Время: {slot_time}\n\n"
-                        "Уведомление отправлено за день до занятия."
-                    ),
-                )
+            notification_coach_result = await send_logged_message (
+                bot=bot,
+                chat_id=coach_user.telegram_id,
+                text=(
+                    "Напоминание о занятии с клиентом.\n\n"
+                    f"Клиент: {client.display_name or 'без имени'}\n"
+                    f"Время: {slot_time}\n\n"
+                    "Уведомление отправлено за день до занятия."
+                ),
+                notification_type="appointment_reminder_24h_coach",
+                related_entity_type="appointment",
+                related_entity_id=appointment.id,
+                session_factory=session_factory,
+            )
+            if notification_coach_result and notification_coach_result.ok:
                 coach_sent = True
-
-            except Exception:
-                logger.exception(
-                    "Failed to send 24h reminder to coach",
+            else:
+                logger.info(
+                    "Failed to send 24h reminder to client",
                     extra={
                         "appointment_id": appointment.id,
                         "coach_user_id": coach_user.id,
@@ -119,8 +130,6 @@ async def send_appointment_24h_reminders(
                     },
                 )
 
-            # В MVP помечаем как отправленное, если хотя бы одно сообщение ушло.
-            # Иначе задача будет пытаться отправить снова при следующем запуске.
             if client_sent or coach_sent:
                 appointment.reminder_24h_sent_at = datetime.now(timezone.utc)
 

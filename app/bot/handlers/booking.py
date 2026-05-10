@@ -9,6 +9,7 @@ from app.services.booking import (
 )
 
 from app.utils.datetime import format_slot_range_for_timezone, ensure_utc, format_dt_for_timezone
+from app.services.notifications import send_logged_message
 
 router = Router()
 
@@ -71,20 +72,19 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
         )
 
         if result.coach_telegram_id is not None:
-            try:
-                await callback.bot.send_message(
-                    chat_id=result.coach_telegram_id,
-                    text=(
-                        "Новая запись.\n\n"
-                        f"Клиент: {result.client_display_name or 'без имени'}\n"
-                        f"Время: {slot_time}\n"
-                        f"Часовой пояс: {timezone_name}"
-                    ),
-                )
-            except Exception:
-                # Пока не ломаем клиентский flow, если уведомление не ушло.
-                # Позже лучше логировать это в notification_logs.
-                pass
+            await send_logged_message(
+                bot=callback.bot,
+                chat_id=result.coach_telegram_id,
+                notification_type="appointment_booked",
+                related_entity_type="appointment",
+                related_entity_id=result.appointment_id,
+                text=(
+                    "Новая запись.\n\n"
+                    f"Клиент: {result.client_display_name or 'без имени'}\n"
+                    f"Время: {slot_time}\n"
+                    f"Часовой пояс: {timezone_name}"
+                ),
+            )
                 
         return
 

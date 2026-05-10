@@ -13,6 +13,7 @@ from app.services.client_bookings import (
     list_future_bookings_for_client,
 )
 from app.utils.datetime import format_slot_range_for_timezone
+from app.services.notifications import SendNotificationResult, send_logged_message
 
 router = Router()
 
@@ -187,25 +188,25 @@ async def cancel_client_booking_handler(callback: CallbackQuery) -> None:
         timezone_name,
     )
 
-    notification_sent = False
+    notification_sent = None
 
     if result.coach_telegram_id is not None:
-        try:
-            await callback.bot.send_message(
-                chat_id=result.coach_telegram_id,
-                text=(
+        notification_sent = await send_logged_message(
+            bot=callback.bot,
+            chat_id=result.coach_telegram_id,
+            text=(
                     "Клиент отменил запись.\n\n"
                     f"Клиент: {result.client_display_name or 'без имени'}\n"
                     f"Время: {slot_time}\n"
                     f"Часовой пояс: {timezone_name}\n\n"
                     "Слот снова доступен для бронирования."
                 ),
-            )
-            notification_sent = True
-        except Exception:
-            notification_sent = False
+            notification_type="appointment_cancelled_by_client",
+            related_entity_type="appointment",
+            related_entity_id=appointment_id,
+        )   
 
-    if notification_sent:
+    if notification_sent is not None and notification_sent.ok:
         await callback.message.edit_text(
             "Запись отменена. Тренер получил уведомление."
         )
