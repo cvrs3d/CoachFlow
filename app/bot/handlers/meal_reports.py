@@ -24,6 +24,7 @@ from app.services.meal_reports import (
 )
 
 from app.bot.utils.safe_messages import safe_edit_reply_markup, safe_edit_text
+from app.services.notifications import send_logged_message
 
 router = Router()
 
@@ -120,25 +121,24 @@ async def process_meal_photo_handler(
     await message.answer("Отчет отправлен тренеру на проверку.")
 
     if result.coach_telegram_id is not None:
-        try:
-            meal_type_label = MEAL_TYPE_LABELS.get(
-                result.meal_type or "",
-                result.meal_type or "не указан",
-            )
+        meal_type_label = MEAL_TYPE_LABELS.get(
+            result.meal_type or "",
+            result.meal_type or "не указан",
+        )
 
-            await message.bot.send_message(
-                chat_id=result.coach_telegram_id,
-                text=(
-                    "Новый отчет еды.\n\n"
-                    f"Клиент: {result.client_display_name or 'без имени'}\n"
-                    f"Прием пищи: {meal_type_label}\n\n"
-                    "Откройте раздел “🍽 Отчеты еды”, чтобы проверить отчет."
-                ),
-            )
-        except Exception:
-            # Клиентский flow не ломаем, если уведомление тренеру не ушло.
-            # Позже лучше логировать это в notification_logs.
-            pass
+        await send_logged_message(
+            bot=message.bot,
+            chat_id=result.coach_telegram_id,
+            notification_type="meal_report_submitted",
+            related_entity_type="meal_report",
+            related_entity_id=result.report_id,
+            text=(
+                "Новый отчет еды.\n\n"
+                f"Клиент: {result.client_display_name or 'без имени'}\n"
+                f"Прием пищи: {meal_type_label}\n\n"
+                "Откройте раздел “🍽 Отчеты еды”, чтобы проверить отчет."
+            ),
+        )
 
 
 @router.message(MealReportStates.waiting_for_photo)
@@ -371,13 +371,15 @@ async def process_meal_report_review(
 
         if result.comment:
             client_text += f"\n\nКомментарий тренера:\n{result.comment}"
-        try:
-            await callback.bot.send_message(
-                chat_id=result.client_telegram_id,
-                text=client_text,
-            )
-        except Exception:
-            pass
+
+        await send_logged_message(
+            bot=callback.bot,
+            chat_id=result.client_telegram_id,
+            notification_type="meal_report_reviewed",
+            related_entity_type="meal_report",
+            related_entity_id=report_id,
+            text=client_text,
+        )
 
 @router.message(MealReportStates.waiting_for_review_comment)
 async def process_meal_review_comment_handler(
@@ -432,17 +434,18 @@ async def process_meal_review_comment_handler(
     )
 
     if result.client_telegram_id is not None:
-        try:
-            await message.bot.send_message(
-                chat_id=result.client_telegram_id,
-                text=(
-                    "Тренер проверил ваш отчет еды.\n\n"
-                    f"Результат: {verdict_label}\n\n"
-                    f"Комментарий тренера:\n{comment}"
-                ),
-            )
-        except Exception:
-            pass
+        await send_logged_message(
+            bot=message.bot,
+            chat_id=result.client_telegram_id,
+            notification_type="clarification_requested",
+            related_entity_type="meal_report",
+            related_entity_id=report_id,
+            text=(
+                "Тренер проверил ваш отчет еды.\n\n"
+                f"Результат: {verdict_label}\n\n"
+                f"Комментарий тренера:\n{comment}"
+            ),
+        )
 
 REPORT_STATUS_LABELS = {
     "draft": "Черновик",
@@ -636,15 +639,16 @@ async def process_clarification_response_handler(
     )
 
     if result.coach_telegram_id is not None:
-        try:
-            await message.bot.send_message(
-                chat_id=result.coach_telegram_id,
-                text=(
-                    "Клиент ответил на уточнение по отчету еды.\n\n"
-                    f"Клиент: {result.client_display_name or 'без имени'}\n"
-                    f"Ответ:\n{result.response_text}\n\n"
-                    "Откройте раздел “🍽 Отчеты еды”, чтобы проверить отчет снова."
-                ),
-            )
-        except Exception:
-            pass
+        await send_logged_message(
+            bot=message.bot,
+            chat_id=result.coach_telegram_id,
+            notification_type="clarification_answered",
+            related_entity_type="meal_report",
+            related_entity_id=result.report_id,
+            text=(
+                "Клиент ответил на уточнение по отчету еды.\n\n"
+                f"Клиент: {result.client_display_name or 'без имени'}\n"
+                f"Ответ:\n{result.response_text}\n\n"
+                "Откройте раздел “🍽 Отчеты еды”, чтобы проверить отчет снова."
+            ),
+        )
