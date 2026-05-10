@@ -145,14 +145,29 @@ def client_meal_reports_keyboard(
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def client_meal_report_card_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+def client_meal_report_card_keyboard(
+    report_id: str | None = None,
+    can_reply: bool = False,
+) -> InlineKeyboardMarkup:
+    keyboard = []
+
+    if can_reply and report_id is not None:
+        keyboard.append(
             [
                 InlineKeyboardButton(
-                    text="⬅️ К моим отчетам",
-                    callback_data="mr:clist",
+                    text="✍️ Ответить тренеру",
+                    callback_data=f"mr:reply:{report_id}",
                 )
             ]
+        )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                text="⬅️ К моим отчетам",
+                callback_data="mr:clist",
+            )
         ]
     )
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
