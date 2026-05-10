@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 
 from app.core.config import settings
 from app.bot.handlers import (
+    dashboard,
     common,
     booking,
     client_bookings,
@@ -38,6 +39,7 @@ async def main() -> None:
 
     dp.include_router(start.router)
     dp.include_router(invites.router)
+    dp.include_router(dashboard.router)
     dp.include_router(privacy.router)
     dp.include_router(registration.router)
     dp.include_router(schedule.router)
@@ -46,6 +48,7 @@ async def main() -> None:
     dp.include_router(clients.router)
     dp.include_router(meal_reports.router)
     dp.include_router(menu.router)
+
 
     await setup_default_commands(bot)
 

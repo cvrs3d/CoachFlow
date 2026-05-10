@@ -5,6 +5,9 @@ def coach_main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [
+                KeyboardButton(text="📊 Обзор"),
+            ],
+            [
                 KeyboardButton(text="🔗 Создать приглашение"),
             ],
             [
