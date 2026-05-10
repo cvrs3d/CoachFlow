@@ -23,6 +23,8 @@ from app.services.meal_reports import (
     list_meal_reports_for_coach_by_filter,
 )
 
+from app.bot.utils.safe_messages import safe_edit_reply_markup, safe_edit_text
+
 router = Router()
 
 COACH_REPORT_FILTER_LABELS = {
@@ -69,8 +71,8 @@ async def choose_meal_type_handler(
 
     await callback.answer()
 
-    await callback.message.edit_text(
-        "Прием пищи выбран: "
+    await safe_edit_text(callback.message,
+        text="Прием пищи выбран: "
         f"{MEAL_TYPE_LABELS[meal_type]}\n\n"
         "Теперь отправьте фото еды.\n"
         "Можно добавить подпись к фото, если хотите."
@@ -189,14 +191,14 @@ async def coach_meal_reports_by_filter_handler(callback: CallbackQuery) -> None:
     title = COACH_REPORT_FILTER_LABELS.get(report_filter, "Отчеты еды")
 
     if not reports:
-        await callback.message.edit_text(
-            f"{title}.\n\nСписок пуст.",
+        await safe_edit_text(callback.message,
+            text=f"{title}.\n\nСписок пуст.",
             reply_markup=coach_meal_reports_filter_keyboard(),
         )
         return
 
-    await callback.message.edit_text(
-        f"{title}:",
+    await safe_edit_text(callback.message, 
+        text=f"{title}:",
         reply_markup=pending_meal_reports_keyboard(reports),
     )
 
@@ -211,10 +213,7 @@ async def pending_meal_reports_callback_handler(callback: CallbackQuery) -> None
 
     await callback.answer()
 
-    try:
-        await callback.message.edit_reply_markup(reply_markup=None)
-    except Exception:
-        pass
+    await safe_edit_reply_markup(callback.message, reply_markup=None)
 
     if not reports:
         await callback.message.answer("Нет отчетов еды на проверку.")
@@ -237,9 +236,7 @@ async def open_meal_report_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if card is None:
-        await callback.message.edit_text(
-            "Отчет не найден или у вас нет доступа."
-        )
+        await safe_edit_text(callback.message, "Отчет не найден или у вас нет доступа.")
         return
 
     meal_type_label = MEAL_TYPE_LABELS.get(
@@ -260,13 +257,13 @@ async def open_meal_report_handler(callback: CallbackQuery) -> None:
         caption += f"\n\nКомментарий клиента:\n{card.report.client_comment}"
 
     if not card.photo.telegram_file_id:
-        await callback.message.edit_text(
-            "У отчета нет доступного Telegram file_id."
+        await safe_edit_text(callback.message,
+            text="У отчета нет доступного Telegram file_id."
         )
         return
 
-    await callback.message.edit_text(
-        "Открываю отчет..."
+    await safe_edit_text(callback.message,
+        text="Открываю отчет..."
     )
 
     await callback.bot.send_photo(
@@ -483,10 +480,8 @@ async def my_meal_reports_callback_handler(callback: CallbackQuery) -> None:
 
     await callback.answer()
 
-    try:
-        await callback.message.edit_reply_markup(reply_markup=None)
-    except Exception:
-        pass
+    
+    await safe_edit_reply_markup(callback.message, reply_markup=None)
 
     if not reports:
         await callback.message.answer("У вас пока нет отчетов еды.")
@@ -510,8 +505,8 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if card is None:
-        await callback.message.edit_text(
-            "Отчет не найден или у вас нет доступа."
+        await safe_edit_text(callback.message,
+            text="Отчет не найден или у вас нет доступа."
         )
         return
 
@@ -550,8 +545,8 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
         caption += f"\n\nВаш ответ тренеру:\n{card.report.clarification_response}"
 
     if not card.photo.telegram_file_id:
-        await callback.message.edit_text(
-            "У отчета нет доступного фото.",
+        await safe_edit_text(callback.message,
+            text="У отчета нет доступного фото.",
             reply_markup=client_meal_report_card_keyboard(
                 report_id=card.report.id,
                 can_reply=card.report.status == "needs_clarification",
@@ -559,7 +554,7 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
         )
         return
 
-    await callback.message.edit_text("Открываю отчет...")
+    await safe_edit_text(callback.message, text="Открываю отчет...")
 
     await callback.bot.send_photo(
         chat_id=callback.message.chat.id,
