@@ -8,7 +8,11 @@ router = Router()
 
 @router.message(Command("cancel"))
 @router.message(F.text == "Отмена")
-async def cancel_handler(message: Message, state: FSMContext) -> None:
+@router.message(F.text == "❌ Отмена")
+async def cancel_handler(
+    message: Message,
+    state: FSMContext,
+) -> None:
     current_state = await state.get_state()
 
     if current_state is None:
