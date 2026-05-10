@@ -26,21 +26,31 @@ def client_card_keyboard(client_id: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
+                    text="📅 Записи",
+                    callback_data=f"cc:bookings:{client_id}",
+                ),
+                InlineKeyboardButton(
+                    text="🍽 Отчеты еды",
+                    callback_data=f"cc:meals:{client_id}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
                     text="✏️ Изменить имя",
                     callback_data=f"client:edit_name:{client_id}",
-                )
+                ),
             ],
             [
                 InlineKeyboardButton(
-                    text="🗑 Удалить клиента",
+                    text="🚫 Деактивировать",
                     callback_data=f"client:delete:{client_id}",
-                )
+                ),
             ],
             [
                 InlineKeyboardButton(
-                    text="⬅️ Назад к клиентам",
-                    callback_data="client:list",
-                )
+                    text="⬅️ К клиентам",
+                    callback_data="clients:list",
+                ),
             ],
         ]
     )

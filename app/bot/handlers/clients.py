@@ -4,21 +4,67 @@ from aiogram.fsm.context import FSMContext
 
 
 from app.bot.keyboards.clients import (
-    client_card_keyboard,
     clients_list_keyboard,
     confirm_delete_client_keyboard,
 )
 from app.bot.states.clients import ClientEditStates
 from app.services.clients import (
     deactivate_client_for_coach,
-    get_client_card_for_coach,
     get_client_display_name_for_coach,
     list_clients_for_coach,
     update_client_display_name_for_coach,
 )
 
+from app.bot.keyboards.clients import client_card_keyboard
+from app.services.client_cards import get_client_card_for_coach
+from app.utils.datetime import format_slot_range_for_timezone
+
 router = Router()
 
+
+def format_client_card_text(result) -> str:
+    assert result.card is not None
+
+    card = result.card
+    client = card.client
+    user = card.user
+    stats = card.stats
+
+    client_name = client.display_name or "без имени"
+    username = f"@{user.username}" if user.username else "не указан"
+
+    if card.upcoming_appointment is None:
+        upcoming_text = "нет будущих записей"
+    else:
+        upcoming_text = format_slot_range_for_timezone(
+            card.upcoming_appointment.starts_at,
+            card.upcoming_appointment.ends_at,
+            result.coach_timezone or "Europe/Prague",
+        )
+
+    return (
+        f"👤 Клиент: {client_name}\n\n"
+        f"Telegram username: {username}\n"
+        f"Статус: {client.status}\n\n"
+        f"Ближайшая запись:\n"
+        f"{upcoming_text}\n\n"
+        f"Food reports за 7 дней:\n"
+        f"- отправлено: {stats.reports_7d_count}\n"
+        f"- проверено: {stats.reviewed_7d_count}\n"
+        f"- требует улучшения: {stats.needs_improvement_7d_count}\n"
+        f"- ждет ответа клиента: {stats.waiting_clarification_count}"
+    )
+
+@router.callback_query(F.data.startswith("cc:bookings:"))
+async def client_card_bookings_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
+    await callback.message.answer("Раздел записей клиента добавим следующим шагом.")
+
+
+@router.callback_query(F.data.startswith("cc:meals:"))
+async def client_card_meals_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
+    await callback.message.answer("Раздел отчетов еды клиента добавим следующим шагом.")
 
 @router.message(F.text == "👥 Клиенты")
 async def clients_menu_handler(message: Message) -> None:
@@ -54,36 +100,20 @@ async def clients_list_callback_handler(callback: CallbackQuery) -> None:
 async def open_client_card_handler(callback: CallbackQuery) -> None:
     client_id = callback.data.split(":", 2)[2]
 
-    card = await get_client_card_for_coach(
-        telegram_id=callback.from_user.id,
+    result = await get_client_card_for_coach(
+        coach_telegram_id=callback.from_user.id,
         client_id=client_id,
     )
 
     await callback.answer()
 
-    if card is None:
-        await callback.message.edit_text(
-            "Клиент не найден или у вас нет доступа."
-        )
+    if not result.ok or result.card is None:
+        await callback.message.answer("Клиент не найден или у вас нет доступа.")
         return
 
-    client = card.client
-    user = card.user
-
-    username_text = f"@{user.username}" if user.username else "не указан"
-
-    text = (
-        "Карточка клиента\n\n"
-        f"Имя: {client.display_name or 'не указано'}\n"
-        f"Статус клиента: {client.status}\n"
-        f"Telegram username: {username_text}\n"
-        f"Telegram ID: {user.telegram_id}\n"
-        f"Активных записей: {card.future_appointments_count}"
-    )
-
-    await callback.message.edit_text(
-        text,
-        reply_markup=client_card_keyboard(client.id),
+    await callback.message.answer(
+        format_client_card_text(result),
+        reply_markup=client_card_keyboard(client_id),
     )
 
 @router.callback_query(F.data.startswith("client:edit_name:"))
@@ -149,31 +179,19 @@ async def edit_client_name_process_handler(
         await message.answer("Не удалось обновить имя клиента.")
         return
 
-    card = await get_client_card_for_coach(
+    result = await get_client_card_for_coach(
         telegram_id=message.from_user.id,
         client_id=client_id,
     )
 
-    if card is None:
+    if result is None:
         await message.answer("Имя обновлено.")
         return
 
-    client = card.client
-    user = card.user
-
-    username_text = f"@{user.username}" if user.username else "не указан"
-
-    text = (
-        "Карточка клиента\n\n"
-        f"Имя: {client.display_name or 'не указано'}\n"
-        f"Статус клиента: {client.status}\n"
-        f"Telegram username: {username_text}\n"
-        f"Telegram ID: {user.telegram_id}\n"
-        f"Активных записей: {card.future_appointments_count}"
-    )
-
+    client = result.card.client
+    
     await message.answer(
-        text,
+        format_client_card_text(result),
         reply_markup=client_card_keyboard(client.id),
     )
 
@@ -181,18 +199,20 @@ async def edit_client_name_process_handler(
 async def confirm_delete_client_handler(callback: CallbackQuery) -> None:
     client_id = callback.data.split(":", 2)[2]
 
-    card = await get_client_card_for_coach(
+    result = await get_client_card_for_coach(
         telegram_id=callback.from_user.id,
         client_id=client_id,
     )
 
     await callback.answer()
 
-    if card is None:
+    if result is None:
         await callback.message.edit_text(
             "Клиент не найден или у вас нет доступа."
         )
         return
+    
+    card = result.card
 
     await callback.message.edit_text(
         "Удалить клиента?\n\n"

@@ -62,7 +62,7 @@ async def list_clients_for_coach(
         return list(result.scalars().all())
 
 
-async def get_client_card_for_coach(
+async def get_client_card(
     *,
     telegram_id: int,
     client_id: str,
