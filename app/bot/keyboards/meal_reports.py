@@ -67,14 +67,30 @@ def pending_meal_reports_keyboard(
         else:
             submitted_text = str(submitted_at)
 
+        status_text = {
+            "submitted": "на проверке",
+            "in_review": "на проверке",
+            "needs_clarification": "нужно уточнение",
+            "reviewed": "проверен",
+        }.get(report.status, report.status)
+
         keyboard.append(
             [
                 InlineKeyboardButton(
-                    text=f"{client_name} · {meal_type} · {submitted_text}",
+                    text=f"{client_name} · {meal_type} · {submitted_text} · {status_text}",
                     callback_data=f"mr:o:{report.id}",
                 )
             ]
         )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                text="⬅️ К фильтрам",
+                callback_data="mr:filters",
+            )
+        ]
+    )
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
@@ -171,3 +187,27 @@ def client_meal_report_card_keyboard(
     )
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def coach_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🟡 На проверку",
+                    callback_data="mr:f:pending",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❓ Нужно уточнение",
+                    callback_data="mr:f:clarification",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✅ Проверенные",
+                    callback_data="mr:f:reviewed",
+                )
+            ],
+        ]
+    )

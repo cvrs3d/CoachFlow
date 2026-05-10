@@ -219,9 +219,10 @@ async def get_active_coach_meal_context(
         )
 
 
-async def list_pending_meal_reports_for_coach(
+async def list_meal_reports_for_coach_by_filter(
     *,
     telegram_id: int,
+    report_filter: str,
     limit: int = 10,
     session_factory=AsyncSessionLocal,
 ) -> list[tuple[MealReport, Client]]:
@@ -233,17 +234,41 @@ async def list_pending_meal_reports_for_coach(
     if context is None:
         return []
 
+    filter_statuses = {
+        "pending": ["submitted", "in_review"],
+        "clarification": ["needs_clarification"],
+        "reviewed": ["reviewed"],
+    }
+
+    statuses = filter_statuses.get(report_filter)
+
+    if statuses is None:
+        return []
+
     async with session_factory() as session:
         result = await session.execute(
             select(MealReport, Client)
             .join(Client, MealReport.client_id == Client.id)
             .where(MealReport.coach_id == context.coach.id)
-            .where(MealReport.status.in_(["submitted", "in_review"]))
-            .order_by(MealReport.submitted_at.asc())
+            .where(MealReport.status.in_(statuses))
+            .order_by(MealReport.submitted_at.desc())
             .limit(limit)
         )
 
         return list(result.all())
+
+async def list_pending_meal_reports_for_coach(
+    *,
+    telegram_id: int,
+    limit: int = 10,
+    session_factory=AsyncSessionLocal,
+) -> list[tuple[MealReport, Client]]:
+    return await list_meal_reports_for_coach_by_filter(
+        telegram_id=telegram_id,
+        report_filter="pending",
+        limit=limit,
+        session_factory=session_factory,
+    )
 
 
 async def get_meal_report_for_coach(
@@ -285,13 +310,13 @@ async def get_meal_report_for_coach(
         )
         latest_review = latest_review_result.scalar_one_or_none()
 
-        return MealReportCard(
-            report=report,
-            photo=photo,
-            client=client,
-            client_user=client_user,
-            latest_review=latest_review,
-        )
+    return MealReportCard(
+        report=report,
+        photo=photo,
+        client=client,
+        client_user=client_user,
+        latest_review=latest_review,
+    )
 
 
 async def review_meal_report(

@@ -15,9 +15,172 @@ from tests.factories.entities import (
     create_coach,
     create_user,
 )
-
+from app.services.meal_reports import list_meal_reports_for_coach_by_filter
 from app.services.meal_reports import respond_to_meal_report_clarification
 
+async def test_coach_filter_does_not_show_other_coach_reports(session_factory):
+    async with session_factory() as session:
+        coach_user_1, coach_1 = await create_coach(session, telegram_id=1001)
+        client_user_1, client_1, relation_1 = await create_client_for_coach(
+            session,
+            coach=coach_1,
+            telegram_id=2001,
+            display_name="Client One",
+        )
+
+        coach_user_2, coach_2 = await create_coach(session, telegram_id=1002)
+        client_user_2, client_2, relation_2 = await create_client_for_coach(
+            session,
+            coach=coach_2,
+            telegram_id=2002,
+            display_name="Client Two",
+        )
+
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    coach_1_reports = await list_meal_reports_for_coach_by_filter(
+        telegram_id=1001,
+        report_filter="pending",
+        session_factory=session_factory,
+    )
+
+    coach_2_reports = await list_meal_reports_for_coach_by_filter(
+        telegram_id=1002,
+        report_filter="pending",
+        session_factory=session_factory,
+    )
+
+    assert len(coach_1_reports) == 1
+    assert coach_1_reports[0][0].id == created.report_id
+    assert coach_2_reports == []
+
+async def test_coach_can_filter_clarification_meal_reports(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    reviewed = await review_meal_report(
+        telegram_id=1001,
+        report_id=created.report_id,
+        verdict="question",
+        comment="Что было в соусе?",
+        session_factory=session_factory,
+    )
+
+    assert reviewed.ok is True
+
+    clarification = await list_meal_reports_for_coach_by_filter(
+        telegram_id=1001,
+        report_filter="clarification",
+        session_factory=session_factory,
+    )
+
+    pending = await list_meal_reports_for_coach_by_filter(
+        telegram_id=1001,
+        report_filter="pending",
+        session_factory=session_factory,
+    )
+
+    assert len(clarification) == 1
+    assert clarification[0][0].status == "needs_clarification"
+    assert pending == []
+
+async def test_coach_can_filter_reviewed_meal_reports(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    reviewed = await review_meal_report(
+        telegram_id=1001,
+        report_id=created.report_id,
+        verdict="ok",
+        session_factory=session_factory,
+    )
+
+    assert reviewed.ok is True
+
+    pending = await list_meal_reports_for_coach_by_filter(
+        telegram_id=1001,
+        report_filter="pending",
+        session_factory=session_factory,
+    )
+
+    reviewed_reports = await list_meal_reports_for_coach_by_filter(
+        telegram_id=1001,
+        report_filter="reviewed",
+        session_factory=session_factory,
+    )
+
+    assert pending == []
+    assert len(reviewed_reports) == 1
+    assert reviewed_reports[0][0].id == created.report_id
+    assert reviewed_reports[0][0].status == "reviewed"
+
+
+async def test_coach_can_filter_pending_meal_reports(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    reports = await list_meal_reports_for_coach_by_filter(
+        telegram_id=1001,
+        report_filter="pending",
+        session_factory=session_factory,
+    )
+
+    assert len(reports) == 1
+    assert reports[0][0].id == created.report_id
+    assert reports[0][0].status == "submitted"
 
 async def test_get_active_client_meal_context(session_factory):
     async with session_factory() as session:

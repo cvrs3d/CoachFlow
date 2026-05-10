@@ -8,6 +8,8 @@ from app.bot.keyboards.meal_reports import (
     meal_review_keyboard,
     meal_type_keyboard,
     pending_meal_reports_keyboard,
+    coach_meal_reports_filter_keyboard,
+    pending_meal_reports_keyboard,
 )
 from app.bot.states.meal_reports import MealReportStates
 from app.services.meal_reports import (
@@ -18,10 +20,16 @@ from app.services.meal_reports import (
     list_pending_meal_reports_for_coach,
     review_meal_report,
     respond_to_meal_report_clarification,
+    list_meal_reports_for_coach_by_filter,
 )
 
 router = Router()
 
+COACH_REPORT_FILTER_LABELS = {
+    "pending": "Отчеты на проверку",
+    "clarification": "Отчеты, ожидающие уточнения клиента",
+    "reviewed": "Проверенные отчеты",
+}
 
 MEAL_TYPE_LABELS = {
     "breakfast": "Завтрак",
@@ -146,26 +154,58 @@ VERDICT_LABELS = {
 
 
 @router.message(F.text == "🍽 Отчеты еды")
-async def pending_meal_reports_handler(message: Message) -> None:
-    reports = await list_pending_meal_reports_for_coach(
-        telegram_id=message.from_user.id,
+async def meal_reports_filters_handler(message: Message) -> None:
+    await message.answer(
+        "Выберите раздел отчетов еды:",
+        reply_markup=coach_meal_reports_filter_keyboard(),
+    )
+
+@router.callback_query(F.data == "mr:filters")
+async def meal_reports_filters_callback_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+
+    await callback.message.answer(
+        "Выберите раздел отчетов еды:",
+        reply_markup=coach_meal_reports_filter_keyboard(),
+    )
+
+@router.callback_query(F.data.startswith("mr:f:"))
+async def coach_meal_reports_by_filter_handler(callback: CallbackQuery) -> None:
+    report_filter = callback.data.split(":", 2)[2]
+
+    reports = await list_meal_reports_for_coach_by_filter(
+        telegram_id=callback.from_user.id,
+        report_filter=report_filter,
         limit=10,
     )
 
+    await callback.answer()
+
+    title = COACH_REPORT_FILTER_LABELS.get(report_filter, "Отчеты еды")
+
     if not reports:
-        await message.answer("Нет отчетов еды на проверку.")
+        await callback.message.edit_text(
+            f"{title}.\n\nСписок пуст.",
+            reply_markup=coach_meal_reports_filter_keyboard(),
+        )
         return
 
-    await message.answer(
-        "Отчеты еды на проверку:",
+    await callback.message.edit_text(
+        f"{title}:",
         reply_markup=pending_meal_reports_keyboard(reports),
     )
 
 
 @router.callback_query(F.data == "mr:list")
 async def pending_meal_reports_callback_handler(callback: CallbackQuery) -> None:
-    reports = await list_pending_meal_reports_for_coach(
+    reports = await list_meal_reports_for_coach_by_filter(
         telegram_id=callback.from_user.id,
+        report_filter="pending",
         limit=10,
     )
 
