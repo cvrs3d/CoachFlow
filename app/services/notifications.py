@@ -12,6 +12,16 @@ class SendNotificationResult:
     ok: bool
     error_message: str | None = None
 
+#appointment_booked
+# appointment_cancelled_by_client
+# appointment_cancelled_by_coach
+# appointment_reminder_24h_client
+# appointment_reminder_24h_coach
+# meal_report_submitted
+# meal_report_reviewed
+# clarification_requested
+# clarification_answered
+
 
 async def create_notification_log(
     *,
