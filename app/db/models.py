@@ -281,3 +281,48 @@ class MealReview(Base):
         Index("idx_meal_reviews_report_created", "report_id", "created_at"),
         Index("idx_meal_reviews_coach_created", "coach_id", "created_at"),
     )
+
+
+class NotificationLog(Base):
+    __tablename__ = "notification_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+
+    recipient_telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    notification_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    error_message: Mapped[str | None] = mapped_column(Text)
+
+    related_entity_type: Mapped[str | None] = mapped_column(String(100))
+    related_entity_id: Mapped[str | None] = mapped_column(String(36))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('sent', 'failed')",
+            name="ck_notification_logs_status",
+        ),
+        Index(
+            "idx_notification_logs_recipient_created",
+            "recipient_telegram_id",
+            "created_at",
+        ),
+        Index(
+            "idx_notification_logs_type_status_created",
+            "notification_type",
+            "status",
+            "created_at",
+        ),
+        Index(
+            "idx_notification_logs_entity",
+            "related_entity_type",
+            "related_entity_id",
+        ),
+    )
