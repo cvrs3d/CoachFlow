@@ -29,6 +29,7 @@ def client_main_menu() -> ReplyKeyboardMarkup:
             ],
             [
                 KeyboardButton(text="🍽 Отправить фото еды"),
+                KeyboardButton(text="🍽 Мои отчеты еды"),
             ],
             [
                 KeyboardButton(text="👤 Мой профиль"),

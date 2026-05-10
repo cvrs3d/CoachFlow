@@ -106,3 +106,53 @@ def meal_review_keyboard(report_id: str) -> InlineKeyboardMarkup:
             ],
         ]
     )
+
+# mr:co:<report_id> = meal report client open
+# mr:clist = client reports list
+
+def client_meal_reports_keyboard(
+    reports: list[MealReport],
+) -> InlineKeyboardMarkup:
+    keyboard = []
+
+    for report in reports:
+        meal_type = MEAL_TYPE_LABELS.get(report.meal_type, report.meal_type)
+
+        submitted_at = report.submitted_at
+        if isinstance(submitted_at, datetime):
+            submitted_text = submitted_at.strftime("%d.%m %H:%M")
+        else:
+            submitted_text = str(submitted_at)
+
+        status_text = {
+            "submitted": "на проверке",
+            "in_review": "на проверке",
+            "reviewed": "проверен",
+            "needs_clarification": "нужно уточнение",
+            "archived": "архив",
+            "draft": "черновик",
+        }.get(report.status, report.status)
+
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{meal_type} · {submitted_text} · {status_text}",
+                    callback_data=f"mr:co:{report.id}",
+                )
+            ]
+        )
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def client_meal_report_card_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⬅️ К моим отчетам",
+                    callback_data="mr:clist",
+                )
+            ]
+        ]
+    )

@@ -4,7 +4,9 @@ from app.db.models import MealReview, MealReportPhoto, MealReport
 from app.services.meal_reports import (
     create_meal_report_from_photo,
     get_active_client_meal_context,
+    get_meal_report_for_client,
     get_meal_report_for_coach,
+    list_meal_reports_for_client,
     list_pending_meal_reports_for_coach,
     review_meal_report,
 )
@@ -570,3 +572,213 @@ async def test_coach_can_ask_question_with_comment(session_factory):
         report = report_result.scalar_one()
 
         assert report.status == "needs_clarification"
+
+async def test_client_can_list_own_meal_reports(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    assert created.ok is True
+
+    reports = await list_meal_reports_for_client(
+        telegram_id=2001,
+        session_factory=session_factory,
+    )
+
+    assert len(reports) == 1
+    assert reports[0].id == created.report_id
+    assert reports[0].meal_type == "lunch"
+    assert reports[0].status == "submitted"
+
+
+async def test_client_cannot_list_other_client_reports(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+
+        client_user_1, client_1, relation_1 = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Client One",
+        )
+
+        client_user_2, client_2, relation_2 = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2002,
+            display_name="Client Two",
+        )
+
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    assert created.ok is True
+
+    reports_1 = await list_meal_reports_for_client(
+        telegram_id=2001,
+        session_factory=session_factory,
+    )
+
+    reports_2 = await list_meal_reports_for_client(
+        telegram_id=2002,
+        session_factory=session_factory,
+    )
+
+    assert len(reports_1) == 1
+    assert len(reports_2) == 0
+
+
+async def test_client_can_open_own_meal_report(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="dinner",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        client_comment="Курица и овощи",
+        session_factory=session_factory,
+    )
+
+    card = await get_meal_report_for_client(
+        telegram_id=2001,
+        report_id=created.report_id,
+        session_factory=session_factory,
+    )
+
+    assert card is not None
+    assert card.report.id == created.report_id
+    assert card.report.meal_type == "dinner"
+    assert card.report.client_comment == "Курица и овощи"
+    assert card.photo.telegram_file_id == "telegram-file-id-123"
+    assert card.review is None
+
+
+async def test_client_cannot_open_other_client_report(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+
+        client_user_1, client_1, relation_1 = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Client One",
+        )
+
+        client_user_2, client_2, relation_2 = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2002,
+            display_name="Client Two",
+        )
+
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    card = await get_meal_report_for_client(
+        telegram_id=2002,
+        report_id=created.report_id,
+        session_factory=session_factory,
+    )
+
+    assert card is None
+
+
+async def test_client_can_see_review_comment(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    reviewed = await review_meal_report(
+        telegram_id=1001,
+        report_id=created.report_id,
+        verdict="needs_improvement",
+        comment="Добавь больше белка.",
+        session_factory=session_factory,
+    )
+
+    assert reviewed.ok is True
+
+    card = await get_meal_report_for_client(
+        telegram_id=2001,
+        report_id=created.report_id,
+        session_factory=session_factory,
+    )
+
+    assert card is not None
+    assert card.report.status == "reviewed"
+    assert card.review is not None
+    assert card.review.verdict == "needs_improvement"
+    assert card.review.comment == "Добавь больше белка."
+
+
+async def test_inactive_client_cannot_list_meal_reports(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Inactive Client",
+        )
+
+        client.status = "inactive"
+
+        await session.commit()
+
+    reports = await list_meal_reports_for_client(
+        telegram_id=2001,
+        session_factory=session_factory,
+    )
+
+    assert reports == []

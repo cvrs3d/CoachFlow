@@ -3,6 +3,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.bot.keyboards.meal_reports import (
+    client_meal_report_card_keyboard,
+    client_meal_reports_keyboard,
     meal_review_keyboard,
     meal_type_keyboard,
     pending_meal_reports_keyboard,
@@ -10,7 +12,9 @@ from app.bot.keyboards.meal_reports import (
 from app.bot.states.meal_reports import MealReportStates
 from app.services.meal_reports import (
     create_meal_report_from_photo,
+    get_meal_report_for_client,
     get_meal_report_for_coach,
+    list_meal_reports_for_client,
     list_pending_meal_reports_for_coach,
     review_meal_report,
 )
@@ -166,15 +170,19 @@ async def pending_meal_reports_callback_handler(callback: CallbackQuery) -> None
 
     await callback.answer()
 
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+
     if not reports:
-        await callback.message.edit_text("Нет отчетов еды на проверку.")
+        await callback.message.answer("Нет отчетов еды на проверку.")
         return
 
-    await callback.message.edit_text(
+    await callback.message.answer(
         "Отчеты еды на проверку:",
         reply_markup=pending_meal_reports_keyboard(reports),
     )
-
 
 @router.callback_query(F.data.startswith("mr:o:"))
 async def open_meal_report_handler(callback: CallbackQuery) -> None:
@@ -397,3 +405,117 @@ async def process_meal_review_comment_handler(
             )
         except Exception:
             pass
+
+REPORT_STATUS_LABELS = {
+    "draft": "Черновик",
+    "submitted": "На проверке",
+    "in_review": "На проверке",
+    "reviewed": "Проверен",
+    "needs_clarification": "Нужно уточнение",
+    "archived": "Архив",
+}
+
+
+@router.message(F.text == "🍽 Мои отчеты еды")
+async def my_meal_reports_handler(message: Message) -> None:
+    reports = await list_meal_reports_for_client(
+        telegram_id=message.from_user.id,
+        limit=10,
+    )
+
+    if not reports:
+        await message.answer("У вас пока нет отчетов еды.")
+        return
+
+    await message.answer(
+        "Ваши последние отчеты еды:",
+        reply_markup=client_meal_reports_keyboard(reports),
+    )
+
+
+@router.callback_query(F.data == "mr:clist")
+async def my_meal_reports_callback_handler(callback: CallbackQuery) -> None:
+    reports = await list_meal_reports_for_client(
+        telegram_id=callback.from_user.id,
+        limit=10,
+    )
+
+    await callback.answer()
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+
+    if not reports:
+        await callback.message.answer("У вас пока нет отчетов еды.")
+        return
+
+    await callback.message.answer(
+        "Ваши последние отчеты еды:",
+        reply_markup=client_meal_reports_keyboard(reports),
+    )
+
+
+@router.callback_query(F.data.startswith("mr:co:"))
+async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
+    report_id = callback.data.split(":", 2)[2]
+
+    card = await get_meal_report_for_client(
+        telegram_id=callback.from_user.id,
+        report_id=report_id,
+    )
+
+    await callback.answer()
+
+    if card is None:
+        await callback.message.edit_text(
+            "Отчет не найден или у вас нет доступа."
+        )
+        return
+
+    meal_type_label = MEAL_TYPE_LABELS.get(
+        card.report.meal_type,
+        card.report.meal_type,
+    )
+
+    status_label = REPORT_STATUS_LABELS.get(
+        card.report.status,
+        card.report.status,
+    )
+
+    caption = (
+        "Ваш отчет еды\n\n"
+        f"Прием пищи: {meal_type_label}\n"
+        f"Статус: {status_label}"
+    )
+
+    if card.report.client_comment:
+        caption += f"\n\nВаш комментарий:\n{card.report.client_comment}"
+
+    if card.review is not None:
+        verdict_label = VERDICT_LABELS.get(card.review.verdict, card.review.verdict)
+
+        caption += (
+            "\n\nПроверка тренера:"
+            f"\nРезультат: {verdict_label}"
+        )
+
+        if card.review.comment:
+            caption += f"\nКомментарий:\n{card.review.comment}"
+
+    if not card.photo.telegram_file_id:
+        await callback.message.edit_text(
+            "У отчета нет доступного фото.",
+            reply_markup=client_meal_report_card_keyboard(),
+        )
+        return
+
+    await callback.message.edit_text("Открываю отчет...")
+
+    await callback.bot.send_photo(
+        chat_id=callback.message.chat.id,
+        photo=card.photo.telegram_file_id,
+        caption=caption,
+        reply_markup=client_meal_report_card_keyboard(),
+    )

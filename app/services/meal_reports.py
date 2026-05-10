@@ -16,6 +16,12 @@ from app.db.models import (
 )
 
 @dataclass
+class ClientMealReportCard:
+    report: MealReport
+    photo: MealReportPhoto
+    review: MealReview | None = None
+
+@dataclass
 class ClientMealContext:
     user: User
     client: Client
@@ -350,3 +356,68 @@ async def review_meal_report(
         except Exception:
             await session.rollback()
             raise
+
+async def list_meal_reports_for_client(
+    *,
+    telegram_id: int,
+    limit: int = 10,
+    session_factory=AsyncSessionLocal,
+) -> list[MealReport]:
+    context = await get_active_client_meal_context(
+        telegram_id,
+        session_factory=session_factory,
+    )
+
+    if context is None:
+        return []
+
+    async with session_factory() as session:
+        result = await session.execute(
+            select(MealReport)
+            .where(MealReport.client_id == context.client.id)
+            .order_by(MealReport.submitted_at.desc())
+            .limit(limit)
+        )
+
+        return list(result.scalars().all())
+
+
+async def get_meal_report_for_client(
+    *,
+    telegram_id: int,
+    report_id: str,
+    session_factory=AsyncSessionLocal,
+) -> ClientMealReportCard | None:
+    context = await get_active_client_meal_context(
+        telegram_id,
+        session_factory=session_factory,
+    )
+
+    if context is None:
+        return None
+
+    async with session_factory() as session:
+        result = await session.execute(
+            select(MealReport, MealReportPhoto)
+            .join(MealReportPhoto, MealReportPhoto.report_id == MealReport.id)
+            .where(MealReport.id == report_id)
+            .where(MealReport.client_id == context.client.id)
+        )
+
+        row = result.one_or_none()
+
+        if row is None:
+            return None
+
+        report, photo = row
+
+        review_result = await session.execute(
+            select(MealReview).where(MealReview.report_id == report.id)
+        )
+        review = review_result.scalar_one_or_none()
+
+        return ClientMealReportCard(
+            report=report,
+            photo=photo,
+            review=review,
+        )
