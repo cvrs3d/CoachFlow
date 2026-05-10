@@ -51,7 +51,7 @@ class MealReportCard:
     photo: MealReportPhoto
     client: Client
     client_user: User
-
+    latest_review: MealReview | None = None
 
 @dataclass
 class ReviewMealReportResult:
@@ -277,11 +277,20 @@ async def get_meal_report_for_coach(
 
         report, photo, client, client_user = row
 
+        latest_review_result = await session.execute(
+            select(MealReview)
+            .where(MealReview.report_id == report.id)
+            .order_by(MealReview.created_at.desc())
+            .limit(1)
+        )
+        latest_review = latest_review_result.scalar_one_or_none()
+
         return MealReportCard(
             report=report,
             photo=photo,
             client=client,
             client_user=client_user,
+            latest_review=latest_review,
         )
 
 
@@ -296,6 +305,7 @@ async def review_meal_report(
     verdict_to_report_status = {
         "ok": "reviewed",
         "needs_improvement": "reviewed",
+        "bad": "reviewed",
         "question": "needs_clarification",
     }
 
@@ -330,14 +340,6 @@ async def review_meal_report(
             if report.status not in ("submitted", "in_review", "needs_clarification"):
                 return ReviewMealReportResult(ok=False, reason="report_already_reviewed")
 
-            existing_review_result = await session.execute(
-                select(MealReview).where(MealReview.report_id == report.id)
-            )
-            existing_review = existing_review_result.scalar_one_or_none()
-
-            if existing_review is not None:
-                return ReviewMealReportResult(ok=False, reason="report_already_reviewed")
-
             review = MealReview(
                 id=str(uuid.uuid4()),
                 report_id=report.id,
@@ -358,8 +360,8 @@ async def review_meal_report(
                 client_telegram_id=client_user.telegram_id,
                 client_display_name=client.display_name,
                 verdict=verdict,
-                comment=comment,
                 report_status=report.status,
+                comment=comment,
             )
 
         except Exception:
@@ -421,7 +423,10 @@ async def get_meal_report_for_client(
         report, photo = row
 
         review_result = await session.execute(
-            select(MealReview).where(MealReview.report_id == report.id)
+            select(MealReview)
+            .where(MealReview.report_id == report.id)
+            .order_by(MealReview.created_at.desc())
+            .limit(1)
         )
         review = review_result.scalar_one_or_none()
 

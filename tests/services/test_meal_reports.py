@@ -16,7 +16,7 @@ from tests.factories.entities import (
     create_user,
 )
 
-
+from app.services.meal_reports import respond_to_meal_report_clarification
 
 
 async def test_get_active_client_meal_context(session_factory):
@@ -782,3 +782,213 @@ async def test_inactive_client_cannot_list_meal_reports(session_factory):
     )
 
     assert reports == []
+
+
+async def test_report_can_have_multiple_reviews_after_client_clarification(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    first_review = await review_meal_report(
+        telegram_id=1001,
+        report_id=created.report_id,
+        verdict="question",
+        comment="Что было в соусе?",
+        session_factory=session_factory,
+    )
+
+    assert first_review.ok is True
+    assert first_review.report_status == "needs_clarification"
+
+    response = await respond_to_meal_report_clarification(
+        telegram_id=2001,
+        report_id=created.report_id,
+        response_text="Это был йогуртовый соус.",
+        session_factory=session_factory,
+    )
+
+    assert response.ok is True
+
+    second_review = await review_meal_report(
+        telegram_id=1001,
+        report_id=created.report_id,
+        verdict="ok",
+        comment=None,
+        session_factory=session_factory,
+    )
+
+    assert second_review.ok is True
+    assert second_review.report_status == "reviewed"
+
+    async with session_factory() as session:
+        reviews_result = await session.execute(
+            select(MealReview)
+            .where(MealReview.report_id == created.report_id)
+            .order_by(MealReview.created_at.asc())
+        )
+        reviews = reviews_result.scalars().all()
+
+        assert len(reviews) == 2
+        assert reviews[0].verdict == "question"
+        assert reviews[0].comment == "Что было в соусе?"
+        assert reviews[1].verdict == "ok"
+
+        report_result = await session.execute(
+            select(MealReport).where(MealReport.id == created.report_id)
+        )
+        report = report_result.scalar_one()
+
+        assert report.status == "reviewed"
+        assert report.clarification_response == "Это был йогуртовый соус."
+
+
+async def test_client_can_respond_to_meal_report_clarification(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    reviewed = await review_meal_report(
+        telegram_id=1001,
+        report_id=created.report_id,
+        verdict="question",
+        comment="Что было в соусе?",
+        session_factory=session_factory,
+    )
+
+    assert reviewed.ok is True
+    assert reviewed.report_status == "needs_clarification"
+
+    response = await respond_to_meal_report_clarification(
+        telegram_id=2001,
+        report_id=created.report_id,
+        response_text="Это был йогуртовый соус.",
+        session_factory=session_factory,
+    )
+
+    assert response.ok is True
+    assert response.coach_telegram_id == 1001
+    assert response.client_display_name == "Test Client"
+
+    async with session_factory() as session:
+        report_result = await session.execute(
+            select(MealReport).where(MealReport.id == created.report_id)
+        )
+        report = report_result.scalar_one()
+
+        assert report.status == "submitted"
+        assert report.clarification_response == "Это был йогуртовый соус."
+        assert report.clarification_responded_at is not None
+
+        review_result = await session.execute(
+            select(MealReview).where(MealReview.report_id == created.report_id)
+        )
+        reviews = review_result.scalars().all()
+
+        assert len(reviews) == 1
+        assert reviews[0].verdict == "question"
+
+
+async def test_client_cannot_respond_to_other_client_clarification(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+
+        client_user_1, client_1, relation_1 = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Client One",
+        )
+        client_user_2, client_2, relation_2 = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2002,
+            display_name="Client Two",
+        )
+
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    reviewed = await review_meal_report(
+        telegram_id=1001,
+        report_id=created.report_id,
+        verdict="question",
+        comment="Что было в соусе?",
+        session_factory=session_factory,
+    )
+
+    assert reviewed.ok is True
+
+    response = await respond_to_meal_report_clarification(
+        telegram_id=2002,
+        report_id=created.report_id,
+        response_text="Чужой ответ.",
+        session_factory=session_factory,
+    )
+
+    assert response.ok is False
+    assert response.reason == "report_not_found"
+
+
+async def test_client_cannot_respond_when_report_is_not_waiting_for_clarification(session_factory):
+    async with session_factory() as session:
+        coach_user, coach = await create_coach(session, telegram_id=1001)
+        client_user, client, relation = await create_client_for_coach(
+            session,
+            coach=coach,
+            telegram_id=2001,
+            display_name="Test Client",
+        )
+        await session.commit()
+
+    created = await create_meal_report_from_photo(
+        telegram_id=2001,
+        meal_type="lunch",
+        telegram_file_id="telegram-file-id-123",
+        telegram_file_unique_id="telegram-unique-id-123",
+        session_factory=session_factory,
+    )
+
+    response = await respond_to_meal_report_clarification(
+        telegram_id=2001,
+        report_id=created.report_id,
+        response_text="Ответ.",
+        session_factory=session_factory,
+    )
+
+    assert response.ok is False
+    assert response.reason == "report_not_waiting_for_clarification"
