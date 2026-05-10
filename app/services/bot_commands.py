@@ -15,6 +15,7 @@ async def setup_default_commands(bot: Bot) -> None:
         commands=[
             BotCommand(command="start", description="Запустить бота"),
             BotCommand(command="health", description="Проверить работу бота"),
+            BotCommand(command="cancel", description="Отменить действие"),
         ],
         scope=BotCommandScopeDefault(),
     )
@@ -28,7 +29,7 @@ async def setup_coach_commands(bot: Bot, coach_telegram_id: int) -> None:
         commands=[
             BotCommand(command="start", description="Запустить бота"),
             BotCommand(command="health", description="Проверить работу бота"),
-            BotCommand(command="invite", description="Создать ссылку приглашения"),
+            BotCommand(command="cancel", description="Отменить действие"),
         ],
         scope=BotCommandScopeChat(chat_id=coach_telegram_id),
     )

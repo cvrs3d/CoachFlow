@@ -10,7 +10,9 @@ services:
       - .:/app
       - ./data:/app/data
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
     command: python -m app.main
 
   postgres:
@@ -21,8 +23,14 @@ services:
       POSTGRES_PASSWORD: coachflow_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coachflow -d coachflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

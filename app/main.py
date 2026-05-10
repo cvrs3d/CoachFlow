@@ -47,9 +47,6 @@ async def main() -> None:
     dp.include_router(meal_reports.router)
     dp.include_router(menu.router)
 
-    for coach_telegram_id in settings.coach_ids:
-        await setup_coach_commands(bot, coach_telegram_id)
-
     await setup_default_commands(bot)
 
     await dp.start_polling(bot)

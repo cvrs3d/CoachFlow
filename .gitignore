@@ -6,3 +6,6 @@ __pycache__/
 .vscode/
 data/
 backups/
+*.sql
+*.dump
+scripts/
