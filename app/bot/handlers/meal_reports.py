@@ -17,6 +17,7 @@ from app.services.meal_reports import (
     list_meal_reports_for_client,
     list_pending_meal_reports_for_coach,
     review_meal_report,
+    respond_to_meal_report_clarification,
 )
 
 router = Router()
@@ -504,10 +505,17 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
         if card.review.comment:
             caption += f"\nКомментарий:\n{card.review.comment}"
 
+        
+    if card.report.clarification_response:
+        caption += f"\n\nВаш ответ тренеру:\n{card.report.clarification_response}"
+
     if not card.photo.telegram_file_id:
         await callback.message.edit_text(
             "У отчета нет доступного фото.",
-            reply_markup=client_meal_report_card_keyboard(),
+            reply_markup=client_meal_report_card_keyboard(
+                report_id=card.report.id,
+                can_reply=card.report.status == "needs_clarification",
+            ),
         )
         return
 
@@ -517,5 +525,91 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
         chat_id=callback.message.chat.id,
         photo=card.photo.telegram_file_id,
         caption=caption,
-        reply_markup=client_meal_report_card_keyboard(),
+        reply_markup=client_meal_report_card_keyboard(
+            report_id=card.report.id,
+            can_reply=card.report.status == "needs_clarification",
+        ),
     )
+
+@router.callback_query(F.data.startswith("mr:reply:"))
+async def start_clarification_response_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
+    report_id = callback.data.split(":", 2)[2]
+
+    await state.set_state(MealReportStates.waiting_for_clarification_response)
+    await state.update_data(report_id=report_id)
+
+    await callback.answer()
+
+    await callback.message.answer(
+        "Напишите ответ тренеру по этому отчету."
+    )
+
+@router.message(MealReportStates.waiting_for_clarification_response)
+async def process_clarification_response_handler(
+    message: Message,
+    state: FSMContext,
+) -> None:
+    response_text = (message.text or "").strip()
+
+    data = await state.get_data()
+    report_id = data.get("report_id")
+
+    if not report_id:
+        await state.clear()
+        await message.answer("Не удалось определить отчет. Откройте отчет заново.")
+        return
+
+    result = await respond_to_meal_report_clarification(
+        telegram_id=message.from_user.id,
+        report_id=report_id,
+        response_text=response_text,
+    )
+
+    if not result.ok:
+        if result.reason == "response_too_short":
+            await message.answer("Ответ слишком короткий. Напишите минимум 2 символа.")
+            return
+
+        if result.reason == "response_too_long":
+            await message.answer("Ответ слишком длинный. Напишите до 1000 символов.")
+            return
+
+        await state.clear()
+
+        if result.reason == "report_not_waiting_for_clarification":
+            await message.answer("Этот отчет сейчас не ожидает уточнения.")
+            return
+
+        if result.reason == "report_not_found":
+            await message.answer("Отчет не найден или у вас нет доступа.")
+            return
+
+        if result.reason == "client_not_found":
+            await message.answer("Не удалось найти активный профиль клиента.")
+            return
+
+        await message.answer("Не удалось отправить ответ.")
+        return
+
+    await state.clear()
+
+    await message.answer(
+        "Ответ отправлен тренеру. Отчет снова отправлен на проверку."
+    )
+
+    if result.coach_telegram_id is not None:
+        try:
+            await message.bot.send_message(
+                chat_id=result.coach_telegram_id,
+                text=(
+                    "Клиент ответил на уточнение по отчету еды.\n\n"
+                    f"Клиент: {result.client_display_name or 'без имени'}\n"
+                    f"Ответ:\n{result.response_text}\n\n"
+                    "Откройте раздел “🍽 Отчеты еды”, чтобы проверить отчет снова."
+                ),
+            )
+        except Exception:
+            pass

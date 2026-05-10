@@ -247,16 +247,37 @@ class MealReview(Base):
     __tablename__ = "meal_reviews"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    report_id: Mapped[str] = mapped_column(String(36), ForeignKey("meal_reports.id"), unique=True, nullable=False)
-    coach_id: Mapped[str] = mapped_column(String(36), ForeignKey("coaches.id"), nullable=False)
+
+    report_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("meal_reports.id"),
+        nullable=False,
+    )
+    coach_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("coaches.id"),
+        nullable=False,
+    )
 
     verdict: Mapped[str] = mapped_column(String(30), nullable=False)
     rating: Mapped[int | None] = mapped_column(Integer)
     comment: Mapped[str | None] = mapped_column(Text)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
 
     __table_args__ = (
-        CheckConstraint("verdict IN ('ok', 'needs_improvement', 'bad', 'question')", name="ck_reviews_verdict"),
-        CheckConstraint("rating IS NULL OR (rating BETWEEN 1 AND 5)", name="ck_reviews_rating"),
+        CheckConstraint(
+            "verdict IN ('ok', 'needs_improvement', 'bad', 'question')",
+            name="ck_reviews_verdict",
+        ),
+        CheckConstraint(
+            "rating IS NULL OR (rating BETWEEN 1 AND 5)",
+            name="ck_reviews_rating",
+        ),
+        Index("idx_meal_reviews_report_created", "report_id", "created_at"),
+        Index("idx_meal_reviews_coach_created", "coach_id", "created_at"),
     )

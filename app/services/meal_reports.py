@@ -64,6 +64,15 @@ class ReviewMealReportResult:
     comment: str | None = None
 
 
+@dataclass
+class RespondToClarificationResult:
+    ok: bool
+    reason: str | None = None
+    coach_telegram_id: int | None = None
+    client_display_name: str | None = None
+    report_id: str | None = None
+    response_text: str | None = None
+
 async def get_active_client_meal_context(
     telegram_id: int,
     session_factory=AsyncSessionLocal,
@@ -421,3 +430,61 @@ async def get_meal_report_for_client(
             photo=photo,
             review=review,
         )
+
+async def respond_to_meal_report_clarification(
+    *,
+    telegram_id: int,
+    report_id: str,
+    response_text: str,
+    session_factory=AsyncSessionLocal,
+) -> RespondToClarificationResult:
+    response_text = response_text.strip()
+
+    if len(response_text) < 2:
+        return RespondToClarificationResult(ok=False, reason="response_too_short")
+
+    if len(response_text) > 1000:
+        return RespondToClarificationResult(ok=False, reason="response_too_long")
+
+    context = await get_active_client_meal_context(
+        telegram_id,
+        session_factory=session_factory,
+    )
+
+    if context is None:
+        return RespondToClarificationResult(ok=False, reason="client_not_found")
+
+    async with session_factory() as session:
+        try:
+            result = await session.execute(
+                select(MealReport)
+                .where(MealReport.id == report_id)
+                .where(MealReport.client_id == context.client.id)
+            )
+            report = result.scalar_one_or_none()
+
+            if report is None:
+                return RespondToClarificationResult(ok=False, reason="report_not_found")
+
+            if report.status != "needs_clarification":
+                return RespondToClarificationResult(ok=False, reason="report_not_waiting_for_clarification")
+
+            report.clarification_response = response_text
+            report.clarification_responded_at = datetime.now(timezone.utc)
+
+            # Возвращаем отчет обратно в очередь тренеру.
+            report.status = "submitted"
+
+            await session.commit()
+
+            return RespondToClarificationResult(
+                ok=True,
+                coach_telegram_id=context.coach_user.telegram_id,
+                client_display_name=context.client.display_name,
+                report_id=report.id,
+                response_text=response_text,
+            )
+
+        except Exception:
+            await session.rollback()
+            raise
