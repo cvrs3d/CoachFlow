@@ -211,3 +211,47 @@ def coach_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
             ],
         ]
     )
+
+def coach_client_meal_reports_keyboard(
+    items: list[tuple[MealReport, Client]],
+    client_id: str,
+) -> InlineKeyboardMarkup:
+    keyboard = []
+
+    for report, client in items:
+        meal_type = MEAL_TYPE_LABELS.get(report.meal_type, report.meal_type)
+
+        submitted_at = report.submitted_at
+        if isinstance(submitted_at, datetime):
+            submitted_text = submitted_at.strftime("%d.%m %H:%M")
+        else:
+            submitted_text = str(submitted_at)
+
+        status_text = {
+            "draft": "черновик",
+            "submitted": "на проверке",
+            "in_review": "на проверке",
+            "reviewed": "проверен",
+            "needs_clarification": "нужно уточнение",
+            "archived": "архив",
+        }.get(report.status, report.status)
+
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{meal_type} · {submitted_text} · {status_text}",
+                    callback_data=f"mr:o:{report.id}",
+                )
+            ]
+        )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                text="⬅️ К карточке клиента",
+                callback_data=f"client:open:{client_id}",
+            )
+        ]
+    )
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)

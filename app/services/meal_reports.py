@@ -16,6 +16,11 @@ from app.db.models import (
 )
 
 @dataclass
+class CoachClientMealReportItem:
+    report: MealReport
+    client: Client
+
+@dataclass
 class ClientMealReportCard:
     report: MealReport
     photo: MealReportPhoto
@@ -72,6 +77,45 @@ class RespondToClarificationResult:
     client_display_name: str | None = None
     report_id: str | None = None
     response_text: str | None = None
+
+async def list_meal_reports_for_coach_client(
+    *,
+    coach_telegram_id: int,
+    client_id: str,
+    limit: int = 10,
+    session_factory=AsyncSessionLocal,
+) -> list[tuple[MealReport, Client]]:
+    context = await get_active_coach_meal_context(
+        coach_telegram_id,
+        session_factory=session_factory,
+    )
+
+    if context is None:
+        return []
+
+    async with session_factory() as session:
+        # Проверяем, что клиент действительно принадлежит этому тренеру.
+        relation_result = await session.execute(
+            select(ClientCoachRelation)
+            .where(ClientCoachRelation.coach_id == context.coach.id)
+            .where(ClientCoachRelation.client_id == client_id)
+            .where(ClientCoachRelation.status == "active")
+        )
+        relation = relation_result.scalar_one_or_none()
+
+        if relation is None:
+            return []
+
+        result = await session.execute(
+            select(MealReport, Client)
+            .join(Client, MealReport.client_id == Client.id)
+            .where(MealReport.coach_id == context.coach.id)
+            .where(MealReport.client_id == client_id)
+            .order_by(MealReport.submitted_at.desc())
+            .limit(limit)
+        )
+
+        return list(result.all())
 
 async def get_active_client_meal_context(
     telegram_id: int,

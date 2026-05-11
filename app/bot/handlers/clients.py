@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from app.bot.keyboards.clients import (
     clients_list_keyboard,
     confirm_delete_client_keyboard,
+    coach_client_meal_reports_keyboard,
 )
 from app.bot.states.clients import ClientEditStates
 from app.services.clients import (
@@ -13,6 +14,7 @@ from app.services.clients import (
     get_client_display_name_for_coach,
     list_clients_for_coach,
     update_client_display_name_for_coach,
+    list_meal_reports_for_coach_client,
 )
 
 from app.bot.keyboards.clients import client_card_keyboard
@@ -62,9 +64,32 @@ async def client_card_bookings_handler(callback: CallbackQuery) -> None:
 
 
 @router.callback_query(F.data.startswith("cc:meals:"))
-async def client_card_meals_handler(callback: CallbackQuery) -> None:
+async def client_card_meal_reports_handler(callback: CallbackQuery) -> None:
+    client_id = callback.data.split(":", 2)[2]
+
+    reports = await list_meal_reports_for_coach_client(
+        coach_telegram_id=callback.from_user.id,
+        client_id=client_id,
+        limit=10,
+    )
+
     await callback.answer()
-    await callback.message.answer("Раздел отчетов еды клиента добавим следующим шагом.")
+
+    if not reports:
+        await callback.message.answer(
+            "У этого клиента пока нет отчетов еды."
+        )
+        return
+
+    client_name = reports[0][1].display_name or "без имени"
+
+    await callback.message.answer(
+        f"🍽 Отчеты еды клиента: {client_name}",
+        reply_markup=coach_client_meal_reports_keyboard(
+            reports,
+            client_id=client_id,
+        ),
+    )
 
 @router.message(F.text == "👥 Клиенты")
 async def clients_menu_handler(message: Message) -> None:
