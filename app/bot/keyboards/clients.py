@@ -2,6 +2,18 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.db.models import Client
 
+def client_appointments_keyboard(client_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⬅️ К карточке клиента",
+                    callback_data=f"client:open:{client_id}",
+                )
+            ]
+        ]
+    )
+
 
 def clients_list_keyboard(clients: list[Client]) -> InlineKeyboardMarkup:
     keyboard = []

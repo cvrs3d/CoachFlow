@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from app.bot.keyboards.clients import (
     clients_list_keyboard,
     confirm_delete_client_keyboard,
-    coach_client_meal_reports_keyboard,
+    client_appointments_keyboard,
 )
 from app.bot.states.clients import ClientEditStates
 from app.services.clients import (
@@ -14,15 +14,78 @@ from app.services.clients import (
     get_client_display_name_for_coach,
     list_clients_for_coach,
     update_client_display_name_for_coach,
-    list_meal_reports_for_coach_client,
 )
-
+from app.services.client_appointments import list_client_appointments_for_coach
+from app.utils.datetime import format_slot_range_for_timezone
 from app.bot.keyboards.clients import client_card_keyboard
 from app.services.client_cards import get_client_card_for_coach
 from app.utils.datetime import format_slot_range_for_timezone
-
+from app.bot.keyboards.meal_reports import coach_client_meal_reports_keyboard
 router = Router()
 
+
+APPOINTMENT_STATUS_LABELS = {
+    "booked": "запланирована",
+    "cancelled_by_client": "отменена клиентом",
+    "cancelled_by_coach": "отменена тренером",
+    "completed": "завершена",
+    "no_show": "не пришел",
+}
+
+
+def format_client_appointments_text(result) -> str:
+    assert result.client is not None
+
+    client_name = result.client.display_name or "без имени"
+    timezone_name = result.coach_timezone or "Europe/Prague"
+
+    lines = [
+        f"📅 Записи клиента: {client_name}",
+        "",
+        "Будущие записи:",
+    ]
+
+    future_items = result.future_items or []
+    history_items = result.history_items or []
+
+    if not future_items:
+        lines.append("- нет будущих записей")
+    else:
+        for item in future_items:
+            slot_time = format_slot_range_for_timezone(
+                item.slot.starts_at,
+                item.slot.ends_at,
+                timezone_name,
+            )
+            status = APPOINTMENT_STATUS_LABELS.get(
+                item.appointment.status,
+                item.appointment.status,
+            )
+            lines.append(f"- {slot_time} · {status}")
+
+    lines.extend(
+        [
+            "",
+            "История:",
+        ]
+    )
+
+    if not history_items:
+        lines.append("- истории пока нет")
+    else:
+        for item in history_items:
+            slot_time = format_slot_range_for_timezone(
+                item.slot.starts_at,
+                item.slot.ends_at,
+                timezone_name,
+            )
+            status = APPOINTMENT_STATUS_LABELS.get(
+                item.appointment.status,
+                item.appointment.status,
+            )
+            lines.append(f"- {slot_time} · {status}")
+
+    return "\n".join(lines)
 
 def format_client_card_text(result) -> str:
     assert result.card is not None
@@ -59,8 +122,33 @@ def format_client_card_text(result) -> str:
 
 @router.callback_query(F.data.startswith("cc:bookings:"))
 async def client_card_bookings_handler(callback: CallbackQuery) -> None:
+    client_id = callback.data.split(":", 2)[2]
+
+    result = await list_client_appointments_for_coach(
+        coach_telegram_id=callback.from_user.id,
+        client_id=client_id,
+        future_limit=5,
+        history_limit=5,
+    )
+
     await callback.answer()
-    await callback.message.answer("Раздел записей клиента добавим следующим шагом.")
+
+    if not result.ok:
+        if result.reason == "coach_not_found":
+            await callback.message.answer("Раздел доступен только активному тренеру.")
+            return
+
+        if result.reason == "client_not_found":
+            await callback.message.answer("Клиент не найден или у вас нет доступа.")
+            return
+
+        await callback.message.answer("Не удалось открыть записи клиента.")
+        return
+
+    await callback.message.answer(
+        format_client_appointments_text(result),
+        reply_markup=client_appointments_keyboard(client_id),
+    )
 
 
 @router.callback_query(F.data.startswith("cc:meals:"))
