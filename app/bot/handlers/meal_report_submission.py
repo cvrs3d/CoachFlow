@@ -2,14 +2,15 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from app.bot.handlers.meal_report_labels import MEAL_TYPE_LABELS
 from app.bot.keyboards.meal_reports import meal_type_keyboard
 from app.bot.states.meal_reports import MealReportStates
 from app.bot.utils.safe_messages import safe_edit_text
 from app.services.meal_reports import create_meal_report_from_photo
 from app.services.notifications import send_logged_message
-from app.bot.handlers.meal_report_labels import MEAL_TYPE_LABELS
 
 router = Router()
+
 
 @router.message(F.text == "🍽 Отправить фото еды")
 async def start_meal_report_handler(
@@ -22,6 +23,7 @@ async def start_meal_report_handler(
         "Выберите прием пищи:",
         reply_markup=meal_type_keyboard(),
     )
+
 
 @router.callback_query(F.data.startswith("mr:t:"))
 async def choose_meal_type_handler(
@@ -39,12 +41,14 @@ async def choose_meal_type_handler(
 
     await callback.answer()
 
-    await safe_edit_text(callback.message,
+    await safe_edit_text(
+        callback.message,
         text="Прием пищи выбран: "
         f"{MEAL_TYPE_LABELS[meal_type]}\n\n"
         "Теперь отправьте фото еды.\n"
-        "Можно добавить подпись к фото, если хотите."
+        "Можно добавить подпись к фото, если хотите.",
     )
+
 
 @router.message(MealReportStates.waiting_for_photo, F.photo)
 async def process_meal_photo_handler(
@@ -106,12 +110,14 @@ async def process_meal_photo_handler(
             ),
         )
 
+
 @router.message(MealReportStates.waiting_for_photo)
 async def process_wrong_meal_photo_handler(message: Message) -> None:
     await message.answer(
         "Пожалуйста, отправьте именно фото еды.\n\n"
         "Если хотите отменить действие, используйте /cancel."
     )
+
 
 VERDICT_LABELS = {
     "ok": "Хорошо ✅",

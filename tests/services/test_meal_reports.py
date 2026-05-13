@@ -1,24 +1,24 @@
 from sqlalchemy import select
 
-from app.db.models import MealReview, MealReportPhoto, MealReport
+from app.db.models import MealReport, MealReportPhoto, MealReview
 from app.services.meal_reports import (
     create_meal_report_from_photo,
     get_active_client_meal_context,
     get_meal_report_for_client,
     get_meal_report_for_coach,
     list_meal_reports_for_client,
+    list_meal_reports_for_client_by_filter,
+    list_meal_reports_for_coach_by_filter,
+    list_meal_reports_for_coach_client,
     list_pending_meal_reports_for_coach,
+    respond_to_meal_report_clarification,
     review_meal_report,
 )
 from tests.factories.entities import (
     create_client_for_coach,
     create_coach,
-    create_user,
 )
-from app.services.meal_reports import list_meal_reports_for_coach_by_filter
-from app.services.meal_reports import respond_to_meal_report_clarification
-from app.services.meal_reports import list_meal_reports_for_coach_client
-from app.services.meal_reports import list_meal_reports_for_client_by_filter
+
 
 async def test_client_can_filter_pending_meal_reports(session_factory):
     async with session_factory() as session:
@@ -95,6 +95,7 @@ async def test_client_can_filter_reviewed_meal_reports(session_factory):
     assert reviewed_reports[0].id == created.report_id
     assert reviewed_reports[0].status == "reviewed"
 
+
 async def test_client_can_filter_clarification_meal_reports(session_factory):
     async with session_factory() as session:
         coach_user, coach = await create_coach(session, telegram_id=1001)
@@ -140,6 +141,7 @@ async def test_client_can_filter_clarification_meal_reports(session_factory):
     assert clarification_reports[0].id == created.report_id
     assert clarification_reports[0].status == "needs_clarification"
     assert pending_reports == []
+
 
 async def test_client_filter_does_not_show_other_client_reports(session_factory):
     async with session_factory() as session:
@@ -195,6 +197,7 @@ async def test_client_filter_does_not_show_other_client_reports(session_factory)
     assert len(client_2_reports) == 1
     assert client_2_reports[0].id == report_2.report_id
 
+
 async def test_client_invalid_meal_report_filter_returns_empty_list(session_factory):
     async with session_factory() as session:
         coach_user, coach = await create_coach(session, telegram_id=1001)
@@ -221,6 +224,7 @@ async def test_client_invalid_meal_report_filter_returns_empty_list(session_fact
     )
 
     assert reports == []
+
 
 async def test_client_cannot_list_meal_reports_for_coach_client_filter(session_factory):
     async with session_factory() as session:
@@ -253,6 +257,7 @@ async def test_client_cannot_list_meal_reports_for_coach_client_filter(session_f
     )
 
     assert reports == []
+
 
 async def test_coach_cannot_list_meal_reports_for_other_coach_client(session_factory):
     async with session_factory() as session:
@@ -293,6 +298,7 @@ async def test_coach_cannot_list_meal_reports_for_other_coach_client(session_fac
     )
 
     assert reports == []
+
 
 async def test_coach_can_list_meal_reports_for_specific_client(session_factory):
     async with session_factory() as session:
@@ -356,6 +362,7 @@ async def test_coach_can_list_meal_reports_for_specific_client(session_factory):
     assert client_2_reports[0][0].id == report_2.report_id
     assert client_2_reports[0][1].display_name == "Client Two"
 
+
 async def test_coach_filter_does_not_show_other_coach_reports(session_factory):
     async with session_factory() as session:
         coach_user_1, coach_1 = await create_coach(session, telegram_id=1001)
@@ -399,6 +406,7 @@ async def test_coach_filter_does_not_show_other_coach_reports(session_factory):
     assert len(coach_1_reports) == 1
     assert coach_1_reports[0][0].id == created.report_id
     assert coach_2_reports == []
+
 
 async def test_coach_can_filter_clarification_meal_reports(session_factory):
     async with session_factory() as session:
@@ -444,6 +452,7 @@ async def test_coach_can_filter_clarification_meal_reports(session_factory):
     assert len(clarification) == 1
     assert clarification[0][0].status == "needs_clarification"
     assert pending == []
+
 
 async def test_coach_can_filter_reviewed_meal_reports(session_factory):
     async with session_factory() as session:
@@ -519,6 +528,7 @@ async def test_coach_can_filter_pending_meal_reports(session_factory):
     assert len(reports) == 1
     assert reports[0][0].id == created.report_id
     assert reports[0][0].status == "submitted"
+
 
 async def test_get_active_client_meal_context(session_factory):
     async with session_factory() as session:
@@ -654,6 +664,7 @@ async def test_invalid_meal_type_is_rejected(session_factory):
         reports = reports_result.scalars().all()
 
         assert reports == []
+
 
 async def test_coach_can_list_own_pending_meal_reports(session_factory):
     async with session_factory() as session:
@@ -975,6 +986,7 @@ async def test_report_cannot_be_reviewed_twice(session_factory):
     assert second.ok is False
     assert second.reason == "report_already_reviewed"
 
+
 async def test_coach_can_review_report_with_comment(session_factory):
     async with session_factory() as session:
         coach_user, coach = await create_coach(session, telegram_id=1001)
@@ -1026,6 +1038,7 @@ async def test_coach_can_review_report_with_comment(session_factory):
         assert report.status == "reviewed"
         assert report.reviewed_at is not None
 
+
 async def test_coach_can_ask_question_with_comment(session_factory):
     async with session_factory() as session:
         coach_user, coach = await create_coach(session, telegram_id=1001)
@@ -1073,6 +1086,7 @@ async def test_coach_can_ask_question_with_comment(session_factory):
         report = report_result.scalar_one()
 
         assert report.status == "needs_clarification"
+
 
 async def test_client_can_list_own_meal_reports(session_factory):
     async with session_factory() as session:

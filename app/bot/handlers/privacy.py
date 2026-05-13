@@ -1,9 +1,8 @@
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from app.services.users import activate_user_after_consent
-
 from app.bot.keyboards.main_menu import client_main_menu
+from app.services.users import activate_user_after_consent
 
 router = Router()
 
@@ -21,8 +20,7 @@ async def accept_privacy_handler(callback: CallbackQuery) -> None:
         return
 
     await callback.message.edit_text(
-        "Регистрация завершена.\n\n"
-        "Теперь вы можете пользоваться ботом."
+        "Регистрация завершена.\n\nТеперь вы можете пользоваться ботом."
     )
 
     await callback.message.answer(
@@ -36,6 +34,5 @@ async def decline_privacy_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     await callback.message.edit_text(
-        "Регистрация не завершена.\n\n"
-        "Без согласия на обработку данных бот не может использоваться."
+        "Регистрация не завершена.\n\nБез согласия на обработку данных бот не может использоваться."
     )

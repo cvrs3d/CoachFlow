@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.db.models import (
     Appointment,
@@ -56,7 +56,7 @@ async def test_client_card_counts_upcoming_appointment(session_factory):
             display_name="Test Client",
         )
 
-        starts_at = datetime.now(timezone.utc) + timedelta(days=1)
+        starts_at = datetime.now(UTC) + timedelta(days=1)
         ends_at = starts_at + timedelta(hours=1)
 
         slot = AvailabilitySlot(
@@ -66,7 +66,7 @@ async def test_client_card_counts_upcoming_appointment(session_factory):
             ends_at=ends_at,
             status="booked",
             booked_by_client_id=client.id,
-            booked_at=datetime.now(timezone.utc),
+            booked_at=datetime.now(UTC),
         )
         session.add(slot)
         await session.flush()
@@ -108,7 +108,7 @@ async def test_client_card_counts_food_report_stats(session_factory):
             display_name="Test Client",
         )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         submitted_report = MealReport(
             id="report-submitted",

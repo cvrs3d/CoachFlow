@@ -1,14 +1,13 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 
 from app.db.database import AsyncSessionLocal, safe_commit
-from app.db.models import AvailabilitySlot, Coach, User
+from app.db.models import AvailabilitySlot
 
-from app.services.invites import get_coach_by_telegram_id
 
 @dataclass
 class CreateSlotResult:
@@ -17,7 +16,6 @@ class CreateSlotResult:
     slot_id: str | None = None
     starts_at: datetime | None = None
     ends_at: datetime | None = None
-
 
 
 def parse_coach_datetime(
@@ -46,9 +44,9 @@ async def create_availability_slot(
     duration_minutes: int,
     session_factory=AsyncSessionLocal,
 ) -> CreateSlotResult:
-    starts_at = starts_at.astimezone(timezone.utc)
+    starts_at = starts_at.astimezone(UTC)
     ends_at = starts_at + timedelta(minutes=duration_minutes)
-    
+
     async with session_factory() as session:
         async with session.begin():
             try:
@@ -58,7 +56,9 @@ async def create_availability_slot(
                 conflict_result = await session.execute(
                     select(AvailabilitySlot)
                     .where(AvailabilitySlot.coach_id == coach_id)
-                    .where(AvailabilitySlot.status not in ["cancelled_by_client", "cancelled_by_coach"])
+                    .where(
+                        AvailabilitySlot.status not in ["cancelled_by_client", "cancelled_by_coach"]
+                    )
                     .where(AvailabilitySlot.starts_at < ends_at)
                     .where(AvailabilitySlot.ends_at > starts_at)
                     .limit(1)

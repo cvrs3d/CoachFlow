@@ -1,17 +1,14 @@
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
 from aiogram.filters.command import CommandObject
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from app.bot.keyboards.main_menu import client_main_menu, coach_main_menu
 from app.bot.keyboards.privacy import privacy_consent_keyboard
+from app.bot.states.registration import RegistrationStates
 from app.services.invites import redeem_invite_code
 from app.services.users import get_current_user_by_telegram_id
-
-from aiogram.fsm.context import FSMContext
-
-from app.bot.states.registration import RegistrationStates
-
-from app.bot.keyboards.main_menu import coach_main_menu, client_main_menu
 
 router = Router()
 
@@ -44,10 +41,7 @@ async def start_handler(
     if current and current.client and current.user.status == "pending":
         if not current.client.display_name:
             await state.set_state(RegistrationStates.waiting_for_display_name)
-            await message.answer(
-                "Регистрация уже начата.\n\n"
-                "Как вас записать для тренера?"
-            )
+            await message.answer("Регистрация уже начата.\n\nКак вас записать для тренера?")
             return
 
         await message.answer(
@@ -63,16 +57,12 @@ async def start_handler(
 
     # 4. Незарегистрированный пользователь без invite
     if not invite_code:
-        await message.answer(
-            "Для регистрации нужна ссылка приглашения от тренера."
-        )
+        await message.answer("Для регистрации нужна ссылка приглашения от тренера.")
         return
 
     # 5. Новый пользователь с invite
     result = await redeem_invite_code(
-        code=invite_code,
-        telegram_id=message.from_user.id,
-        username=message.from_user.username
+        code=invite_code, telegram_id=message.from_user.id, username=message.from_user.username
     )
 
     if result.ok:
@@ -88,11 +78,10 @@ async def start_handler(
     if result.reason == "already_registered":
         await message.answer("Вы уже зарегистрированы.")
         return
-    
+
     if result.reason == "pending_consent":
         await message.answer(
-            "Регистрация уже начата.\n\n"
-            "Для завершения нужно согласие на обработку данных.",
+            "Регистрация уже начата.\n\nДля завершения нужно согласие на обработку данных.",
             reply_markup=privacy_consent_keyboard(),
         )
         return
@@ -105,6 +94,7 @@ async def start_handler(
         return
 
     await message.answer("Не удалось обработать ссылку приглашения.")
+
 
 @router.message(Command("health"))
 async def health_handler(message: Message) -> None:

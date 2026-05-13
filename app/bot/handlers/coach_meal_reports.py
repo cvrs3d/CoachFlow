@@ -2,24 +2,28 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from app.bot.keyboards.meal_reports import (
-    coach_meal_reports_filter_keyboard,
-    meal_review_keyboard,
-    pending_meal_reports_keyboard,
-)
-from app.bot.states.meal_reports import MealReportStates
-from app.bot.utils.safe_messages import safe_edit_reply_markup, safe_edit_text
-from app.services.meal_reports import (
-    get_meal_report_for_coach,
-    list_meal_reports_for_coach_by_filter,
-    review_meal_report,
-)
 from app.bot.formatters.meal_reports import (
     format_coach_meal_report_caption,
 )
 from app.bot.handlers.meal_report_labels import (
     COACH_REPORT_FILTER_LABELS,
     VERDICT_LABELS,
+)
+from app.bot.keyboards.meal_reports import (
+    coach_meal_reports_filter_keyboard,
+    meal_review_keyboard,
+    pending_meal_reports_keyboard,
+)
+from app.bot.states.meal_reports import MealReportStates
+from app.bot.utils.safe_messages import (
+    safe_edit_caption,
+    safe_edit_reply_markup,
+    safe_edit_text,
+)
+from app.services.meal_reports import (
+    get_meal_report_for_coach,
+    list_meal_reports_for_coach_by_filter,
+    review_meal_report,
 )
 from app.services.notifications import send_logged_message
 
@@ -33,19 +37,18 @@ async def meal_reports_filters_handler(message: Message) -> None:
         reply_markup=coach_meal_reports_filter_keyboard(),
     )
 
+
 @router.callback_query(F.data == "mr:filters")
 async def meal_reports_filters_callback_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
-    try:
-        await callback.message.edit_reply_markup(reply_markup=None)
-    except Exception:
-        pass
+    await safe_edit_reply_markup(callback.message, reply_markup=None)
 
     await callback.message.answer(
         "Выберите раздел отчетов еды:",
         reply_markup=coach_meal_reports_filter_keyboard(),
     )
+
 
 @router.callback_query(F.data.startswith("mr:f:"))
 async def coach_meal_reports_by_filter_handler(callback: CallbackQuery) -> None:
@@ -62,16 +65,19 @@ async def coach_meal_reports_by_filter_handler(callback: CallbackQuery) -> None:
     title = COACH_REPORT_FILTER_LABELS.get(report_filter, "Отчеты еды")
 
     if not reports:
-        await safe_edit_text(callback.message,
+        await safe_edit_text(
+            callback.message,
             text=f"{title}.\n\nСписок пуст.",
             reply_markup=coach_meal_reports_filter_keyboard(),
         )
         return
 
-    await safe_edit_text(callback.message, 
+    await safe_edit_text(
+        callback.message,
         text=f"{title}:",
         reply_markup=pending_meal_reports_keyboard(reports),
     )
+
 
 @router.callback_query(F.data == "mr:list")
 async def pending_meal_reports_callback_handler(callback: CallbackQuery) -> None:
@@ -94,6 +100,7 @@ async def pending_meal_reports_callback_handler(callback: CallbackQuery) -> None
         reply_markup=pending_meal_reports_keyboard(reports),
     )
 
+
 @router.callback_query(F.data.startswith("mr:o:"))
 async def open_meal_report_handler(callback: CallbackQuery) -> None:
     report_id = callback.data.split(":", 2)[2]
@@ -112,14 +119,10 @@ async def open_meal_report_handler(callback: CallbackQuery) -> None:
     caption = format_coach_meal_report_caption(card)
 
     if not card.photo.telegram_file_id:
-        await safe_edit_text(callback.message,
-            text="У отчета нет доступного Telegram file_id."
-        )
+        await safe_edit_text(callback.message, text="У отчета нет доступного Telegram file_id.")
         return
 
-    await safe_edit_text(callback.message,
-        text="Открываю отчет..."
-    )
+    await safe_edit_text(callback.message, text="Открываю отчет...")
 
     await callback.bot.send_photo(
         chat_id=callback.message.chat.id,
@@ -127,6 +130,7 @@ async def open_meal_report_handler(callback: CallbackQuery) -> None:
         caption=caption,
         reply_markup=meal_review_keyboard(card.report.id),
     )
+
 
 @router.callback_query(F.data.startswith("mr:ok:"))
 async def review_meal_report_ok_handler(callback: CallbackQuery) -> None:
@@ -149,9 +153,7 @@ async def review_meal_report_needs_improvement_handler(
 
     await callback.answer()
 
-    await callback.message.answer(
-        "Напишите комментарий для клиента: что нужно улучшить?"
-    )
+    await callback.message.answer("Напишите комментарий для клиента: что нужно улучшить?")
 
 
 @router.callback_query(F.data.startswith("mr:q:"))
@@ -169,9 +171,8 @@ async def review_meal_report_question_handler(
 
     await callback.answer()
 
-    await callback.message.answer(
-        "Напишите вопрос или уточнение для клиента."
-    )
+    await callback.message.answer("Напишите вопрос или уточнение для клиента.")
+
 
 async def process_meal_report_review(
     callback: CallbackQuery,
@@ -203,24 +204,19 @@ async def process_meal_report_review(
     verdict_label = VERDICT_LABELS.get(verdict, verdict)
 
     if callback.message.caption is not None:
-        try:
-            await callback.message.edit_caption(
-                caption=(
-                    f"{callback.message.caption}\n\n"
-                    f"Проверено: {verdict_label}"
-                ),
-                reply_markup=None,
-            )
-        except Exception:
+        edited = await safe_edit_caption(
+            callback.message,
+            caption=(f"{callback.message.caption}\n\nПроверено: {verdict_label}"),
+            reply_markup=None,
+        )
+
+        if not edited:
             await callback.message.answer(f"Отчет проверен: {verdict_label}")
     else:
         await callback.message.answer(f"Отчет проверен: {verdict_label}")
 
     if result.client_telegram_id is not None:
-        client_text = (
-            "Тренер проверил ваш отчет еды.\n\n"
-            f"Результат: {verdict_label}"
-        )
+        client_text = f"Тренер проверил ваш отчет еды.\n\nРезультат: {verdict_label}"
 
         if result.comment:
             client_text += f"\n\nКомментарий тренера:\n{result.comment}"
@@ -233,6 +229,7 @@ async def process_meal_report_review(
             related_entity_id=report_id,
             text=client_text,
         )
+
 
 @router.message(MealReportStates.waiting_for_review_comment)
 async def process_meal_review_comment_handler(
@@ -282,14 +279,11 @@ async def process_meal_review_comment_handler(
     verdict_label = VERDICT_LABELS.get(verdict, verdict)
 
     await message.answer(
-        f"Отчет проверен: {verdict_label}\n\n"
-        f"Комментарий отправлен клиенту:\n{comment}"
+        f"Отчет проверен: {verdict_label}\n\nКомментарий отправлен клиенту:\n{comment}"
     )
 
     notification_type = (
-        "clarification_requested"
-        if verdict == "question"
-        else "meal_report_reviewed"
+        "clarification_requested" if verdict == "question" else "meal_report_reviewed"
     )
 
     if result.client_telegram_id is not None:

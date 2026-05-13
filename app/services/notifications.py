@@ -12,6 +12,7 @@ class SendNotificationResult:
     ok: bool
     error_message: str | None = None
 
+
 # appointment_booked
 # appointment_cancelled_by_client
 # appointment_cancelled_by_coach

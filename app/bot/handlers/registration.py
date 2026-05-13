@@ -31,9 +31,7 @@ async def process_display_name_handler(
 
     if not ok:
         await state.clear()
-        await message.answer(
-            "Не удалось сохранить имя. Попросите тренера отправить новую ссылку."
-        )
+        await message.answer("Не удалось сохранить имя. Попросите тренера отправить новую ссылку.")
         return
 
     await state.clear()

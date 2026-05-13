@@ -1,8 +1,8 @@
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 
-
+from app.bot.formatters.clients import *
 from app.bot.keyboards.clients import (
     client_appointments_keyboard,
     client_card_keyboard,
@@ -11,6 +11,7 @@ from app.bot.keyboards.clients import (
 )
 from app.bot.keyboards.meal_reports import coach_client_meal_reports_keyboard
 from app.bot.states.clients import ClientEditStates
+from app.bot.utils.safe_messages import safe_answer_or_edit_text
 from app.services.client_appointments import list_client_appointments_for_coach
 from app.services.client_cards import get_client_card_for_coach
 from app.services.clients import (
@@ -19,9 +20,7 @@ from app.services.clients import (
     list_clients_for_coach,
     update_client_display_name_for_coach,
 )
-from app.bot.formatters.clients import *
 from app.services.meal_reports import list_meal_reports_for_coach_client
-from app.bot.utils.safe_messages import safe_answer_or_edit_text
 
 router = Router()
 
@@ -82,9 +81,7 @@ async def client_card_meal_reports_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if not reports:
-        await callback.message.answer(
-            "У этого клиента пока нет отчетов еды."
-        )
+        await callback.message.answer("У этого клиента пока нет отчетов еды.")
         return
 
     client_name = reports[0][1].display_name or "без имени"
@@ -96,6 +93,7 @@ async def client_card_meal_reports_handler(callback: CallbackQuery) -> None:
             client_id=client_id,
         ),
     )
+
 
 @router.message(F.text == "👥 Клиенты")
 async def clients_menu_handler(message: Message) -> None:
@@ -154,6 +152,7 @@ async def open_client_card_handler(callback: CallbackQuery) -> None:
         reply_markup=client_card_keyboard(client_id),
     )
 
+
 @router.callback_query(F.data.startswith("client:edit_name:"))
 async def edit_client_name_start_handler(
     callback: CallbackQuery,
@@ -179,9 +178,9 @@ async def edit_client_name_start_handler(
     await state.update_data(client_id=client_id)
 
     await callback.message.answer(
-        "Введите новое имя клиента.\n\n"
-        f"Текущее имя: {current_name or 'не указано'}"
+        f"Введите новое имя клиента.\n\nТекущее имя: {current_name or 'не указано'}"
     )
+
 
 @router.message(ClientEditStates.waiting_for_new_display_name)
 async def edit_client_name_process_handler(
@@ -228,11 +227,12 @@ async def edit_client_name_process_handler(
         return
 
     client = result.card.client
-    
+
     await message.answer(
         format_client_card_text(result),
         reply_markup=client_card_keyboard(client.id),
     )
+
 
 @router.callback_query(F.data.startswith("client:confirm_delete:"))
 async def confirm_delete_client_handler(callback: CallbackQuery) -> None:
@@ -287,14 +287,12 @@ async def delete_client_handler(callback: CallbackQuery) -> None:
     if not clients:
         await safe_answer_or_edit_text(
             callback.message,
-            "Клиент удален.\n\n"
-            "У вас больше нет активных клиентов.",
+            "Клиент удален.\n\nУ вас больше нет активных клиентов.",
         )
         return
 
     await safe_answer_or_edit_text(
         callback.message,
-        "Клиент удален.\n\n"
-        "Ваши клиенты:",
+        "Клиент удален.\n\nВаши клиенты:",
         reply_markup=clients_list_keyboard(clients),
     )

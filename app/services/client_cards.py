@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 
@@ -117,7 +117,7 @@ async def _get_upcoming_appointment_for_client(
     coach_id: str,
     client_id: str,
 ) -> ClientUpcomingAppointment | None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     result = await session.execute(
         select(Appointment, AvailabilitySlot)
@@ -151,7 +151,7 @@ async def _get_client_food_report_stats(
     coach_id: str,
     client_id: str,
 ) -> ClientCardStats:
-    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    seven_days_ago = datetime.now(UTC) - timedelta(days=7)
 
     reports_7d_count = await _scalar_count(
         session,

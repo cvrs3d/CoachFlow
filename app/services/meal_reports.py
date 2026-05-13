@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
@@ -15,11 +15,13 @@ from app.db.models import (
     User,
 )
 
+
 @dataclass
 class ClientMealReportCard:
     report: MealReport
     photo: MealReportPhoto
     review: MealReview | None = None
+
 
 @dataclass
 class ClientMealContext:
@@ -39,6 +41,7 @@ class CreateMealReportResult:
     meal_type: str | None = None
     submitted_at: datetime | None = None
 
+
 @dataclass
 class CoachMealContext:
     user: User
@@ -52,6 +55,7 @@ class MealReportCard:
     client: Client
     client_user: User
     latest_review: MealReview | None = None
+
 
 @dataclass
 class ReviewMealReportResult:
@@ -72,6 +76,7 @@ class RespondToClarificationResult:
     client_display_name: str | None = None
     report_id: str | None = None
     response_text: str | None = None
+
 
 async def list_meal_reports_for_coach_client(
     *,
@@ -112,22 +117,19 @@ async def list_meal_reports_for_coach_client(
 
         return list(result.all())
 
+
 async def get_active_client_meal_context(
     telegram_id: int,
     session_factory=AsyncSessionLocal,
 ) -> ClientMealContext | None:
     async with session_factory() as session:
-        user_result = await session.execute(
-            select(User).where(User.telegram_id == telegram_id)
-        )
+        user_result = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = user_result.scalar_one_or_none()
 
         if user is None or user.role != "client" or user.status != "active":
             return None
 
-        client_result = await session.execute(
-            select(Client).where(Client.user_id == user.id)
-        )
+        client_result = await session.execute(select(Client).where(Client.user_id == user.id))
         client = client_result.scalar_one_or_none()
 
         if client is None or client.status != "active":
@@ -144,17 +146,13 @@ async def get_active_client_meal_context(
         if relation is None:
             return None
 
-        coach_result = await session.execute(
-            select(Coach).where(Coach.id == relation.coach_id)
-        )
+        coach_result = await session.execute(select(Coach).where(Coach.id == relation.coach_id))
         coach = coach_result.scalar_one_or_none()
 
         if coach is None:
             return None
 
-        coach_user_result = await session.execute(
-            select(User).where(User.id == coach.user_id)
-        )
+        coach_user_result = await session.execute(select(User).where(User.id == coach.user_id))
         coach_user = coach_user_result.scalar_one_or_none()
 
         if coach_user is None or coach_user.status != "active":
@@ -190,7 +188,7 @@ async def create_meal_report_from_photo(
     if context is None:
         return CreateMealReportResult(ok=False, reason="client_not_found")
 
-    submitted_at = datetime.now(timezone.utc)
+    submitted_at = datetime.now(UTC)
 
     async with session_factory() as session:
         try:
@@ -232,6 +230,7 @@ async def create_meal_report_from_photo(
         except Exception:
             await session.rollback()
             raise
+
 
 async def get_active_coach_meal_context(
     telegram_id: int,
@@ -296,6 +295,7 @@ async def list_meal_reports_for_coach_by_filter(
         )
 
         return list(result.all())
+
 
 async def list_pending_meal_reports_for_coach(
     *,
@@ -416,7 +416,7 @@ async def review_meal_report(
             session.add(review)
 
             report.status = verdict_to_report_status[verdict]
-            report.reviewed_at = datetime.now(timezone.utc)
+            report.reviewed_at = datetime.now(UTC)
 
             await session.commit()
 
@@ -475,7 +475,8 @@ async def list_meal_reports_for_client_by_filter(
         result = await session.execute(statement)
 
         return list(result.scalars().all())
-    
+
+
 async def list_meal_reports_for_client(
     *,
     telegram_id: int,
@@ -488,6 +489,7 @@ async def list_meal_reports_for_client(
         limit=limit,
         session_factory=session_factory,
     )
+
 
 async def get_meal_report_for_client(
     *,
@@ -532,6 +534,7 @@ async def get_meal_report_for_client(
             review=review,
         )
 
+
 async def respond_to_meal_report_clarification(
     *,
     telegram_id: int,
@@ -568,10 +571,12 @@ async def respond_to_meal_report_clarification(
                 return RespondToClarificationResult(ok=False, reason="report_not_found")
 
             if report.status != "needs_clarification":
-                return RespondToClarificationResult(ok=False, reason="report_not_waiting_for_clarification")
+                return RespondToClarificationResult(
+                    ok=False, reason="report_not_waiting_for_clarification"
+                )
 
             report.clarification_response = response_text
-            report.clarification_responded_at = datetime.now(timezone.utc)
+            report.clarification_responded_at = datetime.now(UTC)
 
             # Возвращаем отчет обратно в очередь тренеру.
             report.status = "submitted"

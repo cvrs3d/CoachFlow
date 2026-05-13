@@ -1,13 +1,11 @@
-import os
 from pathlib import Path
 
 import pytest
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.db.base import Base
 from app.db import models  # noqa: F401
-
+from app.db.base import Base
 
 TEST_DB_PATH = Path("tests/test.db")
 TEST_DATABASE_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"

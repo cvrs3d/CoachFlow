@@ -1,10 +1,9 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from app.db.models import AvailabilitySlot
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from app.db.models import AvailabilitySlot
 from app.utils.datetime import format_slot_range_for_timezone
 
 
@@ -40,6 +39,7 @@ def slot_duration_keyboard() -> InlineKeyboardMarkup:
             ],
         ]
     )
+
 
 def coach_slots_keyboard(
     slots: list[AvailabilitySlot],
@@ -152,7 +152,7 @@ def slot_date_keyboard(
             [
                 InlineKeyboardButton(
                     text=f"{label} · {target_date.strftime('%d.%m')}",
-                    callback_data=f"sd:{target_date.isoformat()}", # sd = schedule date
+                    callback_data=f"sd:{target_date.isoformat()}",  # sd = schedule date
                 )
             ]
         )
@@ -183,7 +183,7 @@ def slot_time_keyboard(
         row.append(
             InlineKeyboardButton(
                 text=time_text,
-                callback_data=f"st:{time_text}", # st = schedule time.
+                callback_data=f"st:{time_text}",  # st = schedule time.
             )
         )
 

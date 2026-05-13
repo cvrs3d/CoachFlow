@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 
@@ -8,9 +8,9 @@ def ensure_utc(dt: datetime) -> datetime:
     В нашем проекте все naive datetime из БД считаем UTC.
     """
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
 
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def format_dt_for_timezone(

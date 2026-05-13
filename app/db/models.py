@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
@@ -11,8 +13,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql import expression
-from datetime import datetime
+
 from app.db.base import Base
 
 
@@ -26,7 +27,9 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="client")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
         CheckConstraint("role IN ('client', 'coach', 'admin')", name="ck_users_role"),
@@ -38,10 +41,14 @@ class Coach(Base):
     __tablename__ = "coaches"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), unique=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), unique=True, nullable=False
+    )
     display_name: Mapped[str | None] = mapped_column(String(255))
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Europe/Prague")
 
     user = relationship("User")
@@ -51,18 +58,24 @@ class Client(Base):
     __tablename__ = "clients"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), unique=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id"), unique=True, nullable=False
+    )
 
     display_name: Mapped[str | None] = mapped_column(String(255))
     goal: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     user = relationship("User")
 
     __table_args__ = (
-        CheckConstraint("status IN ('pending', 'active', 'inactive', 'blocked')", name="ck_clients_status"),
+        CheckConstraint(
+            "status IN ('pending', 'active', 'inactive', 'blocked')", name="ck_clients_status"
+        ),
     )
 
 
@@ -74,7 +87,9 @@ class ClientCoachRelation(Base):
     coach_id: Mapped[str] = mapped_column(String(36), ForeignKey("coaches.id"), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
         UniqueConstraint("client_id", "coach_id", name="uq_client_coach"),
@@ -94,10 +109,14 @@ class InviteCode(Base):
     used_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
-        CheckConstraint("status IN ('active', 'used', 'expired', 'revoked')", name="ck_invite_codes_status"),
+        CheckConstraint(
+            "status IN ('active', 'used', 'expired', 'revoked')", name="ck_invite_codes_status"
+        ),
         CheckConstraint("max_uses > 0", name="ck_invite_codes_max_uses"),
         CheckConstraint("used_count >= 0", name="ck_invite_codes_used_count"),
     )
@@ -109,11 +128,11 @@ class Consent(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     policy_version: Mapped[str] = mapped_column(String(50), nullable=False)
-    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "policy_version", name="uq_user_policy_version"),
+    accepted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+    __table_args__ = (UniqueConstraint("user_id", "policy_version", name="uq_user_policy_version"),)
 
 
 class AvailabilitySlot(Base):
@@ -129,7 +148,9 @@ class AvailabilitySlot(Base):
     booked_by_client_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("clients.id"))
     booked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
         CheckConstraint("status IN ('available', 'booked', 'cancelled')", name="ck_slots_status"),
@@ -142,12 +163,16 @@ class Appointment(Base):
     __tablename__ = "appointments"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    slot_id: Mapped[str] = mapped_column(String(36), ForeignKey("availability_slots.id"), unique=True, nullable=False)
+    slot_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("availability_slots.id"), unique=True, nullable=False
+    )
     coach_id: Mapped[str] = mapped_column(String(36), ForeignKey("coaches.id"), nullable=False)
     client_id: Mapped[str] = mapped_column(String(36), ForeignKey("clients.id"), nullable=False)
 
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="booked")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     reminder_24h_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -155,7 +180,9 @@ class Appointment(Base):
 
     __table_args__ = (
         CheckConstraint(
-        "status IN ('booked', 'cancelled_by_client', 'cancelled_by_coach', 'completed', 'no_show')", name="ck_appointments_status"),
+            "status IN ('booked', 'cancelled_by_client', 'cancelled_by_coach', 'completed', 'no_show')",
+            name="ck_appointments_status",
+        ),
         Index("idx_appointments_coach_client", "coach_id", "client_id"),
     )
 
@@ -171,11 +198,19 @@ class MealCheckin(Base):
     scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
-        CheckConstraint("meal_type IN ('breakfast', 'lunch', 'dinner', 'snack', 'other')", name="ck_checkins_meal_type"),
-        CheckConstraint("status IN ('pending', 'sent', 'completed', 'missed', 'cancelled')", name="ck_checkins_status"),
+        CheckConstraint(
+            "meal_type IN ('breakfast', 'lunch', 'dinner', 'snack', 'other')",
+            name="ck_checkins_meal_type",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'sent', 'completed', 'missed', 'cancelled')",
+            name="ck_checkins_status",
+        ),
         Index("idx_checkins_client_status_scheduled", "client_id", "status", "scheduled_at"),
     )
 
@@ -192,14 +227,19 @@ class MealReport(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="submitted")
     client_comment: Mapped[str | None] = mapped_column(Text)
 
-    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     clarification_response: Mapped[str | None] = mapped_column(Text)
     clarification_responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
-        CheckConstraint("meal_type IN ('breakfast', 'lunch', 'dinner', 'snack', 'other')", name="ck_reports_meal_type"),
+        CheckConstraint(
+            "meal_type IN ('breakfast', 'lunch', 'dinner', 'snack', 'other')",
+            name="ck_reports_meal_type",
+        ),
         CheckConstraint(
             "status IN ('draft', 'submitted', 'in_review', 'reviewed', 'needs_clarification', 'archived')",
             name="ck_reports_status",
@@ -217,28 +257,35 @@ class StoredFile(Base):
     storage_key: Mapped[str] = mapped_column(String(1024), nullable=False)
     mime_type: Mapped[str | None] = mapped_column(String(100))
     size_bytes: Mapped[int | None] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint("bucket", "storage_key", name="uq_stored_file_object"),
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+    __table_args__ = (UniqueConstraint("bucket", "storage_key", name="uq_stored_file_object"),)
 
 
 class MealReportPhoto(Base):
     __tablename__ = "meal_report_photos"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    report_id: Mapped[str] = mapped_column(String(36), ForeignKey("meal_reports.id"), nullable=False)
+    report_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("meal_reports.id"), nullable=False
+    )
     stored_file_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("stored_files.id"))
 
     telegram_file_id: Mapped[str | None] = mapped_column(Text)
     telegram_file_unique_id: Mapped[str | None] = mapped_column(Text)
 
     processing_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     __table_args__ = (
-        CheckConstraint("processing_status IN ('pending', 'stored', 'failed')", name="ck_report_photos_processing"),
+        CheckConstraint(
+            "processing_status IN ('pending', 'stored', 'failed')",
+            name="ck_report_photos_processing",
+        ),
         Index("idx_report_photos_report", "report_id"),
     )
 

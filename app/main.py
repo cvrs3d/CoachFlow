@@ -3,27 +3,27 @@ import logging
 
 from aiogram import Bot, Dispatcher
 
-from app.core.config import settings
 from app.bot.handlers import (
-    dashboard,
-    common,
     booking,
     client_bookings,
     clients,
+    common,
+    dashboard,
     invites,
-    menu,
     meal_reports,
+    menu,
     privacy,
     registration,
     schedule,
     start,
 )
-from app.services.bot_commands import setup_coach_commands, setup_default_commands
+from app.core.config import settings
 from app.core.logging import setup_logging
-
+from app.services.bot_commands import setup_default_commands
 from app.workers.scheduler import setup_scheduler
 
 logger = logging.getLogger(__name__)
+
 
 async def main() -> None:
     setup_logging(debug=False)
@@ -48,7 +48,6 @@ async def main() -> None:
     dp.include_router(clients.router)
     dp.include_router(meal_reports.router)
     dp.include_router(menu.router)
-
 
     await setup_default_commands(bot)
 

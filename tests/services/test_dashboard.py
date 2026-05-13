@@ -1,16 +1,11 @@
-from datetime import datetime, timedelta, timezone
-
-from sqlalchemy import select
+from datetime import UTC, datetime
 
 from app.db.models import (
-    Appointment,
-    AvailabilitySlot,
     MealReport,
     MealReview,
 )
 from app.services.dashboard import get_coach_dashboard
 from tests.factories.entities import (
-    create_available_slot,
     create_client_for_coach,
     create_coach,
 )
@@ -77,7 +72,7 @@ async def test_dashboard_counts_meal_reports(session_factory):
             display_name="Client One",
         )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         submitted_report = MealReport(
             id="report-submitted",
@@ -169,7 +164,7 @@ async def test_dashboard_does_not_count_other_coach_data(session_factory):
             telegram_id=2002,
         )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         own_report = MealReport(
             id="own-report",

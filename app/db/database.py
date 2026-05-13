@@ -1,11 +1,10 @@
+import logging
+
 from sqlalchemy import event
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.config import settings
-
-import logging
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-
 
 engine = create_async_engine(
     settings.database_url,
@@ -14,6 +13,7 @@ engine = create_async_engine(
 )
 
 if settings.database_url.startswith("sqlite"):
+
     @event.listens_for(engine.sync_engine, "connect")
     def set_sqlite_pragmas(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()

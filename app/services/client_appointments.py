@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
@@ -69,7 +69,7 @@ async def list_client_appointments_for_coach(
 
         client, client_user, relation = client_row
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         future_result = await session.execute(
             select(Appointment, AvailabilitySlot)
@@ -87,10 +87,7 @@ async def list_client_appointments_for_coach(
             .join(AvailabilitySlot, Appointment.slot_id == AvailabilitySlot.id)
             .where(Appointment.coach_id == coach.id)
             .where(Appointment.client_id == client.id)
-            .where(
-                (Appointment.status != "booked")
-                | (AvailabilitySlot.starts_at < now)
-            )
+            .where((Appointment.status != "booked") | (AvailabilitySlot.starts_at < now))
             .order_by(AvailabilitySlot.starts_at.desc())
             .limit(history_limit)
         )

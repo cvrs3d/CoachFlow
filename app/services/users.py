@@ -6,7 +6,6 @@ from sqlalchemy import select
 from app.db.database import AsyncSessionLocal, safe_commit
 from app.db.models import Client, Coach, Consent, User
 
-
 CURRENT_PRIVACY_POLICY_VERSION = "2026-05-03"
 
 
@@ -22,22 +21,16 @@ async def get_current_user_by_telegram_id(
     session_factory=AsyncSessionLocal,
 ) -> CurrentUser | None:
     async with session_factory() as session:
-        user_result = await session.execute(
-            select(User).where(User.telegram_id == telegram_id)
-        )
+        user_result = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = user_result.scalar_one_or_none()
 
         if user is None:
             return None
 
-        coach_result = await session.execute(
-            select(Coach).where(Coach.user_id == user.id)
-        )
+        coach_result = await session.execute(select(Coach).where(Coach.user_id == user.id))
         coach = coach_result.scalar_one_or_none()
 
-        client_result = await session.execute(
-            select(Client).where(Client.user_id == user.id)
-        )
+        client_result = await session.execute(select(Client).where(Client.user_id == user.id))
         client = client_result.scalar_one_or_none()
 
         return CurrentUser(user=user, coach=coach, client=client)
@@ -48,17 +41,13 @@ async def activate_user_after_consent(
     session_factory=AsyncSessionLocal,
 ) -> bool:
     async with session_factory() as session:
-        user_result = await session.execute(
-            select(User).where(User.telegram_id == telegram_id)
-        )
+        user_result = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = user_result.scalar_one_or_none()
 
         if user is None:
             return False
 
-        client_result = await session.execute(
-            select(Client).where(Client.user_id == user.id)
-        )
+        client_result = await session.execute(select(Client).where(Client.user_id == user.id))
         client = client_result.scalar_one_or_none()
 
         if client is None:
@@ -88,23 +77,20 @@ async def activate_user_after_consent(
         await safe_commit(session)
         return True
 
+
 async def set_client_display_name(
     telegram_id: int,
     display_name: str,
     session_factory=AsyncSessionLocal,
 ) -> bool:
     async with session_factory() as session:
-        user_result = await session.execute(
-            select(User).where(User.telegram_id == telegram_id)
-        )
+        user_result = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = user_result.scalar_one_or_none()
 
         if user is None:
             return False
 
-        client_result = await session.execute(
-            select(Client).where(Client.user_id == user.id)
-        )
+        client_result = await session.execute(select(Client).where(Client.user_id == user.id))
         client = client_result.scalar_one_or_none()
 
         if client is None:

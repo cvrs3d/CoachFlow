@@ -52,6 +52,7 @@ async def test_client_can_book_available_slot(session_factory):
         assert appointment.client_id == client.id
         assert appointment.coach_id == coach.id
 
+
 async def test_cannot_book_already_booked_slot(session_factory):
     async with session_factory() as session:
         coach_user, coach = await create_coach(session, telegram_id=1001)
@@ -80,6 +81,7 @@ async def test_cannot_book_already_booked_slot(session_factory):
     assert first.ok is True
     assert second.ok is False
     assert second.reason == "slot_not_available"
+
 
 from app.services.client_bookings import cancel_booking_by_client
 

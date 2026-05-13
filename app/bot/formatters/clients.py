@@ -8,6 +8,7 @@ APPOINTMENT_STATUS_LABELS = {
     "no_show": "не пришел",
 }
 
+
 def format_client_appointments_text(result) -> str:
     assert result.client is not None
 
@@ -61,6 +62,7 @@ def format_client_appointments_text(result) -> str:
             lines.append(f"- {slot_time} · {status}")
 
     return "\n".join(lines)
+
 
 def format_client_card_text(result) -> str:
     assert result.card is not None

@@ -1,10 +1,7 @@
 import logging
 import sys
 
-
-LOG_FORMAT = (
-    "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
-)
+LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 
 
 def setup_logging(debug: bool = False) -> None:
@@ -20,9 +17,7 @@ def setup_logging(debug: bool = False) -> None:
     )
 
     # Уменьшаем шум от SQLAlchemy
-    logging.getLogger("sqlalchemy.engine").setLevel(
-        logging.INFO if debug else logging.WARNING
-    )
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO if debug else logging.WARNING)
     logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
 
     # Уменьшаем шум от aiogram / aiohttp, если надо

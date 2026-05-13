@@ -2,6 +2,10 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from app.bot.formatters.meal_reports import format_client_meal_report_caption
+from app.bot.handlers.meal_report_labels import (
+    CLIENT_REPORT_FILTER_LABELS,
+)
 from app.bot.keyboards.meal_reports import (
     client_meal_report_card_keyboard,
     client_meal_reports_filter_keyboard,
@@ -18,13 +22,10 @@ from app.services.meal_reports import (
     list_meal_reports_for_client_by_filter,
     respond_to_meal_report_clarification,
 )
-from app.bot.handlers.meal_report_labels import (
-    CLIENT_REPORT_FILTER_LABELS,
-)
 from app.services.notifications import send_logged_message
-from app.bot.formatters.meal_reports import format_client_meal_report_caption
 
 router = Router()
+
 
 @router.message(F.text == "🍽 Мои отчеты еды")
 async def my_meal_reports_handler(message: Message) -> None:
@@ -33,19 +34,18 @@ async def my_meal_reports_handler(message: Message) -> None:
         reply_markup=client_meal_reports_filter_keyboard(),
     )
 
+
 @router.callback_query(F.data == "mr:cfilters")
 async def client_meal_reports_filters_callback_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
-    try:
-        await callback.message.edit_reply_markup(reply_markup=None)
-    except Exception:
-        pass
+    await safe_edit_reply_markup(callback.message, reply_markup=None)
 
     await callback.message.answer(
         "Выберите раздел отчетов еды:",
         reply_markup=client_meal_reports_filter_keyboard(),
     )
+
 
 @router.callback_query(F.data.startswith("mr:cf:"))
 async def client_meal_reports_by_filter_handler(callback: CallbackQuery) -> None:
@@ -80,10 +80,7 @@ async def client_meal_reports_by_filter_handler(callback: CallbackQuery) -> None
 async def my_meal_reports_callback_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
-    try:
-        await callback.message.edit_reply_markup(reply_markup=None)
-    except Exception:
-        pass
+    await safe_edit_reply_markup(callback.message, reply_markup=None)
 
     await callback.message.answer(
         "Выберите раздел отчетов еды:",
@@ -103,13 +100,12 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if card is None:
-        await safe_edit_text(callback.message,
-            text="Отчет не найден или у вас нет доступа."
-        )
+        await safe_edit_text(callback.message, text="Отчет не найден или у вас нет доступа.")
         return
 
     if not card.photo.telegram_file_id:
-        await safe_edit_text(callback.message,
+        await safe_edit_text(
+            callback.message,
             text="У отчета нет доступного фото.",
             reply_markup=client_meal_report_card_keyboard(
                 report_id=card.report.id,
@@ -117,7 +113,7 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
             ),
         )
         return
-    
+
     caption = format_client_meal_report_caption(card)
 
     await safe_edit_text(callback.message, text="Открываю отчет...")
@@ -132,6 +128,7 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
         ),
     )
 
+
 @router.callback_query(F.data.startswith("mr:reply:"))
 async def start_clarification_response_handler(
     callback: CallbackQuery,
@@ -144,9 +141,8 @@ async def start_clarification_response_handler(
 
     await callback.answer()
 
-    await callback.message.answer(
-        "Напишите ответ тренеру по этому отчету."
-    )
+    await callback.message.answer("Напишите ответ тренеру по этому отчету.")
+
 
 @router.message(MealReportStates.waiting_for_clarification_response)
 async def process_clarification_response_handler(
@@ -197,9 +193,7 @@ async def process_clarification_response_handler(
 
     await state.clear()
 
-    await message.answer(
-        "Ответ отправлен тренеру. Отчет снова отправлен на проверку."
-    )
+    await message.answer("Ответ отправлен тренеру. Отчет снова отправлен на проверку.")
 
     if result.coach_telegram_id is not None:
         await send_logged_message(

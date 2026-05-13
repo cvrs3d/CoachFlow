@@ -7,9 +7,8 @@ from app.services.booking import (
     get_active_client_context,
     list_available_slots_for_client,
 )
-
-from app.utils.datetime import format_slot_range_for_timezone, ensure_utc, format_dt_for_timezone
 from app.services.notifications import send_logged_message
+from app.utils.datetime import format_slot_range_for_timezone
 
 router = Router()
 
@@ -28,15 +27,14 @@ async def choose_time_handler(message: Message) -> None:
     )
 
     if not slots:
-        await message.answer(
-            "Сейчас нет доступных слотов для записи."
-        )
+        await message.answer("Сейчас нет доступных слотов для записи.")
         return
 
     await message.answer(
         f"Выберите доступное время.\nВремя указано в часовом поясе тренера: {context.coach.timezone}",
         reply_markup=available_slots_keyboard(slots, context.coach.timezone),
     )
+
 
 @router.callback_query(F.data.startswith("book_slot:"))
 async def book_slot_handler(callback: CallbackQuery) -> None:
@@ -56,8 +54,16 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
         # если result.starts_at/result.ends_at строки:
         from datetime import datetime
 
-        starts_at = datetime.fromisoformat(result.starts_at) if isinstance(result.starts_at, str) else result.starts_at
-        ends_at = datetime.fromisoformat(result.ends_at) if isinstance(result.ends_at, str) else result.ends_at
+        starts_at = (
+            datetime.fromisoformat(result.starts_at)
+            if isinstance(result.starts_at, str)
+            else result.starts_at
+        )
+        ends_at = (
+            datetime.fromisoformat(result.ends_at)
+            if isinstance(result.ends_at, str)
+            else result.ends_at
+        )
 
         slot_time = format_slot_range_for_timezone(
             starts_at,
@@ -66,9 +72,7 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
         )
 
         await callback.message.edit_text(
-            "Запись подтверждена.\n\n"
-            f"Время: {slot_time}\n"
-            f"Часовой пояс: {timezone_name}"
+            f"Запись подтверждена.\n\nВремя: {slot_time}\nЧасовой пояс: {timezone_name}"
         )
 
         if result.coach_telegram_id is not None:
@@ -85,21 +89,15 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
                     f"Часовой пояс: {timezone_name}"
                 ),
             )
-                
+
         return
 
     if result.reason == "slot_not_available":
-        await callback.message.edit_text(
-            "Это время уже занято. Выберите другой слот."
-        )
+        await callback.message.edit_text("Это время уже занято. Выберите другой слот.")
         return
 
     if result.reason == "client_not_found":
-        await callback.message.edit_text(
-            "Не удалось найти активный профиль клиента."
-        )
+        await callback.message.edit_text("Не удалось найти активный профиль клиента.")
         return
 
-    await callback.message.edit_text(
-        "Не удалось забронировать слот."
-    )
+    await callback.message.edit_text("Не удалось забронировать слот.")

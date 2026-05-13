@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     bot_token: str
     app_env: str = "dev"
-    database_url: str 
+    database_url: str
 
     coach_telegram_ids: str = ""
 
@@ -20,11 +20,7 @@ class Settings(BaseSettings):
         if not self.coach_telegram_ids:
             return []
 
-        return [
-            int(item.strip())
-            for item in self.coach_telegram_ids.split(",")
-            if item.strip()
-        ]
+        return [int(item.strip()) for item in self.coach_telegram_ids.split(",") if item.strip()]
 
 
-settings = Settings() # pyright: ignore[reportCallIssue]
+settings = Settings()  # pyright: ignore[reportCallIssue]

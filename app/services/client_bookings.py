@@ -1,11 +1,10 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 
 from app.core.config import settings
 from app.db.database import AsyncSessionLocal, safe_commit
-from app.utils.datetime import ensure_utc
 from app.db.models import (
     Appointment,
     AvailabilitySlot,
@@ -14,6 +13,7 @@ from app.db.models import (
     Coach,
     User,
 )
+from app.utils.datetime import ensure_utc
 
 
 @dataclass
@@ -49,17 +49,13 @@ async def get_active_client_context(
     session_factory=AsyncSessionLocal,
 ) -> ClientContext | None:
     async with session_factory() as session:
-        user_result = await session.execute(
-            select(User).where(User.telegram_id == telegram_id)
-        )
+        user_result = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = user_result.scalar_one_or_none()
 
         if user is None or user.role != "client" or user.status != "active":
             return None
 
-        client_result = await session.execute(
-            select(Client).where(Client.user_id == user.id)
-        )
+        client_result = await session.execute(select(Client).where(Client.user_id == user.id))
         client = client_result.scalar_one_or_none()
 
         if client is None or client.status != "active":
@@ -75,9 +71,7 @@ async def get_active_client_context(
         if relation is None:
             return None
 
-        coach_result = await session.execute(
-            select(Coach).where(Coach.id == relation.coach_id)
-        )
+        coach_result = await session.execute(select(Coach).where(Coach.id == relation.coach_id))
         coach = coach_result.scalar_one_or_none()
 
         if coach is None:
@@ -107,15 +101,12 @@ async def list_future_bookings_for_client(
             .join(AvailabilitySlot, Appointment.slot_id == AvailabilitySlot.id)
             .where(Appointment.client_id == context.client.id)
             .where(Appointment.status == "booked")
-            .where(AvailabilitySlot.starts_at >= datetime.now(timezone.utc))
+            .where(AvailabilitySlot.starts_at >= datetime.now(UTC))
             .order_by(AvailabilitySlot.starts_at.asc())
             .limit(limit)
         )
 
-        return [
-            (appointment, slot)
-            for appointment, slot in result.all()
-        ]
+        return [(appointment, slot) for appointment, slot in result.all()]
 
 
 async def get_client_booking_card(
@@ -148,7 +139,7 @@ async def get_client_booking_card(
         appointment, slot, coach, coach_user = row
 
         deadline = timedelta(hours=settings.client_cancellation_deadline_hours)
-        can_cancel = ensure_utc(slot.starts_at) - datetime.now(timezone.utc) > deadline
+        can_cancel = ensure_utc(slot.starts_at) - datetime.now(UTC) > deadline
 
         return ClientBookingCard(
             appointment=appointment,
@@ -198,7 +189,7 @@ async def cancel_booking_by_client(
 
                 deadline = timedelta(hours=settings.client_cancellation_deadline_hours)
 
-                if slot_start_utc - datetime.now(timezone.utc) <= deadline:
+                if slot_start_utc - datetime.now(UTC) <= deadline:
                     await session.rollback()
                     return CancelClientBookingResult(ok=False, reason="too_late")
 

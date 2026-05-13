@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select, text
 
@@ -35,22 +35,19 @@ class BookSlotResult:
     client_display_name: str | None = None
     coach_timezone: str | None = None
 
+
 async def get_active_client_context(
     telegram_id: int,
     session_factory=AsyncSessionLocal,
 ) -> ClientContext | None:
     async with session_factory() as session:
-        user_result = await session.execute(
-            select(User).where(User.telegram_id == telegram_id)
-        )
+        user_result = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = user_result.scalar_one_or_none()
 
         if user is None or user.role != "client" or user.status != "active":
             return None
 
-        client_result = await session.execute(
-            select(Client).where(Client.user_id == user.id)
-        )
+        client_result = await session.execute(select(Client).where(Client.user_id == user.id))
         client = client_result.scalar_one_or_none()
 
         if client is None or client.status != "active":
@@ -66,9 +63,7 @@ async def get_active_client_context(
         if relation is None:
             return None
 
-        coach_result = await session.execute(
-            select(Coach).where(Coach.id == relation.coach_id)
-        )
+        coach_result = await session.execute(select(Coach).where(Coach.id == relation.coach_id))
         coach = coach_result.scalar_one_or_none()
 
         if coach is None:
@@ -96,7 +91,7 @@ async def list_available_slots_for_client(
             select(AvailabilitySlot)
             .where(AvailabilitySlot.coach_id == context.coach.id)
             .where(AvailabilitySlot.status == "available")
-            .where(AvailabilitySlot.starts_at >= datetime.now(timezone.utc))
+            .where(AvailabilitySlot.starts_at >= datetime.now(UTC))
             .order_by(AvailabilitySlot.starts_at.asc())
             .limit(limit)
         )
@@ -116,7 +111,7 @@ async def book_slot_for_client(
         return BookSlotResult(ok=False, reason="client_not_found")
 
     async with session_factory() as session:
-        async with session.begin():            
+        async with session.begin():
             try:
                 # 1. Атомарно занимаем слот.
                 # Если слот уже занят, RETURNING не вернет строку.
@@ -135,7 +130,7 @@ async def book_slot_for_client(
                         "slot_id": slot_id,
                         "client_id": context.client.id,
                         "coach_id": context.coach.id,
-                        "booked_at": datetime.now(timezone.utc),
+                        "booked_at": datetime.now(UTC),
                     },
                 )
 
@@ -147,7 +142,7 @@ async def book_slot_for_client(
 
                 starts_at = slot_row["starts_at"]
                 ends_at = slot_row["ends_at"]
-                
+
                 existing_appointment_result = await session.execute(
                     select(Appointment).where(Appointment.slot_id == slot_row["id"])
                 )
@@ -171,7 +166,7 @@ async def book_slot_for_client(
                     appointment.reminder_24h_sent_at = None
 
                 coach_user_result = await session.execute(
-                select(User).where(User.id == context.coach.user_id)
+                    select(User).where(User.id == context.coach.user_id)
                 )
                 coach_user = coach_user_result.scalar_one_or_none()
 

@@ -12,8 +12,8 @@ from app.services.client_bookings import (
     get_client_booking_card,
     list_future_bookings_for_client,
 )
+from app.services.notifications import send_logged_message
 from app.utils.datetime import format_slot_range_for_timezone
-from app.services.notifications import SendNotificationResult, send_logged_message
 
 router = Router()
 
@@ -78,9 +78,7 @@ async def open_client_booking_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if card is None:
-        await callback.message.edit_text(
-            "Запись не найдена или уже отменена."
-        )
+        await callback.message.edit_text("Запись не найдена или уже отменена.")
         return
 
     slot_time = format_slot_range_for_timezone(
@@ -130,9 +128,7 @@ async def confirm_cancel_client_booking_handler(callback: CallbackQuery) -> None
     await callback.answer()
 
     if card is None:
-        await callback.message.edit_text(
-            "Запись не найдена или уже отменена."
-        )
+        await callback.message.edit_text("Запись не найдена или уже отменена.")
         return
 
     if not card.can_cancel:
@@ -174,9 +170,7 @@ async def cancel_client_booking_handler(callback: CallbackQuery) -> None:
             )
             return
 
-        await callback.message.edit_text(
-            "Не удалось отменить запись. Возможно, она уже отменена."
-        )
+        await callback.message.edit_text("Не удалось отменить запись. Возможно, она уже отменена.")
         return
 
     context = await get_active_client_context(callback.from_user.id)
@@ -195,21 +189,19 @@ async def cancel_client_booking_handler(callback: CallbackQuery) -> None:
             bot=callback.bot,
             chat_id=result.coach_telegram_id,
             text=(
-                    "Клиент отменил запись.\n\n"
-                    f"Клиент: {result.client_display_name or 'без имени'}\n"
-                    f"Время: {slot_time}\n"
-                    f"Часовой пояс: {timezone_name}\n\n"
-                    "Слот снова доступен для бронирования."
-                ),
+                "Клиент отменил запись.\n\n"
+                f"Клиент: {result.client_display_name or 'без имени'}\n"
+                f"Время: {slot_time}\n"
+                f"Часовой пояс: {timezone_name}\n\n"
+                "Слот снова доступен для бронирования."
+            ),
             notification_type="appointment_cancelled_by_client",
             related_entity_type="appointment",
             related_entity_id=appointment_id,
-        )   
+        )
 
     if notification_sent is not None and notification_sent.ok:
-        await callback.message.edit_text(
-            "Запись отменена. Тренер получил уведомление."
-        )
+        await callback.message.edit_text("Запись отменена. Тренер получил уведомление.")
     else:
         await callback.message.edit_text(
             "Запись отменена, но уведомление тренеру отправить не удалось."

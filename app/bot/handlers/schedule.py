@@ -14,22 +14,20 @@ from app.bot.keyboards.schedule import (
     slot_duration_keyboard,
     slot_time_keyboard,
 )
-
+from app.bot.states.schedule import ScheduleStates
+from app.services.notifications import send_logged_message
+from app.services.schedule import (
+    create_availability_slot,
+    get_coach_by_telegram_id,
+    parse_coach_datetime,
+)
 from app.services.schedule_management import (
     cancel_booked_slot_for_coach,
     delete_available_slot_for_coach,
     get_slot_card_for_coach,
     list_coach_manageable_slots,
 )
-from app.bot.states.schedule import ScheduleStates
-from app.services.schedule import (
-    create_availability_slot,
-    get_coach_by_telegram_id,
-    list_coach_slots,
-    parse_coach_datetime,
-)
-from app.utils.datetime import format_slot_range_for_timezone, ensure_utc, format_dt_for_timezone
-from app.services.notifications import send_logged_message, SendNotificationResult
+from app.utils.datetime import format_slot_range_for_timezone
 
 router = Router()
 
@@ -61,12 +59,12 @@ async def add_slot_start_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_date)
 
     await callback.message.answer(
-        f"Выберите дату слота.\n\n"
-        f"Часовой пояс: {coach.timezone}",
+        f"Выберите дату слота.\n\nЧасовой пояс: {coach.timezone}",
         reply_markup=slot_date_keyboard(coach.timezone),
     )
 
     await callback.answer()
+
 
 @router.callback_query(
     ScheduleStates.waiting_for_slot_date,
@@ -82,8 +80,7 @@ async def process_slot_date_button_handler(
 
     if date_value == "manual":
         await callback.message.answer(
-            "Введите дату слота в формате YYYY-MM-DD.\n\n"
-            "Например: 2026-05-10"
+            "Введите дату слота в формате YYYY-MM-DD.\n\nНапример: 2026-05-10"
         )
         return
 
@@ -91,8 +88,7 @@ async def process_slot_date_button_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_start_time)
 
     await callback.message.edit_text(
-        f"Дата выбрана: {date_value}\n\n"
-        "Теперь выберите время начала:",
+        f"Дата выбрана: {date_value}\n\nТеперь выберите время начала:",
         reply_markup=slot_time_keyboard(start_hour=10, end_hour=18),
     )
 
@@ -108,8 +104,7 @@ async def process_slot_date_handler(
         datetime.strptime(date_text, "%Y-%m-%d")
     except ValueError:
         await message.answer(
-            "Неверный формат даты.\n\n"
-            "Введите дату в формате YYYY-MM-DD. Например: 2026-05-10"
+            "Неверный формат даты.\n\nВведите дату в формате YYYY-MM-DD. Например: 2026-05-10"
         )
         return
 
@@ -117,8 +112,7 @@ async def process_slot_date_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_start_time)
 
     await message.answer(
-        "Дата сохранена.\n\n"
-        "Теперь выберите время начала:",
+        "Дата сохранена.\n\nТеперь выберите время начала:",
         reply_markup=slot_time_keyboard(start_hour=10, end_hour=18),
     )
 
@@ -136,20 +130,17 @@ async def process_slot_time_button_handler(
     await callback.answer()
 
     if time_value == "manual":
-        await callback.message.answer(
-            "Введите время начала в формате HH:MM.\n\n"
-            "Например: 14:30"
-        )
+        await callback.message.answer("Введите время начала в формате HH:MM.\n\nНапример: 14:30")
         return
 
     await state.update_data(slot_start_time=time_value)
     await state.set_state(ScheduleStates.waiting_for_slot_duration)
 
     await callback.message.edit_text(
-        f"Время выбрано: {time_value}\n\n"
-        "Выберите длительность слота:",
+        f"Время выбрано: {time_value}\n\nВыберите длительность слота:",
         reply_markup=slot_duration_keyboard(),
     )
+
 
 @router.message(ScheduleStates.waiting_for_slot_start_time)
 async def process_slot_start_time_handler(
@@ -162,8 +153,7 @@ async def process_slot_start_time_handler(
         datetime.strptime(time_text, "%H:%M")
     except ValueError:
         await message.answer(
-            "Неверный формат времени.\n\n"
-            "Введите время в формате HH:MM. Например: 14:30"
+            "Неверный формат времени.\n\nВведите время в формате HH:MM. Например: 14:30"
         )
         return
 
@@ -171,8 +161,7 @@ async def process_slot_start_time_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_duration)
 
     await message.answer(
-        "Время сохранено.\n\n"
-        "Выберите длительность слота:",
+        "Время сохранено.\n\nВыберите длительность слота:",
         reply_markup=slot_duration_keyboard(),
     )
 
@@ -247,15 +236,14 @@ async def list_slots_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if not slots:
-        await callback.message.edit_text(
-            "У вас пока нет будущих активных слотов."
-        )
+        await callback.message.edit_text("У вас пока нет будущих активных слотов.")
         return
 
     await callback.message.edit_text(
         f"Ваши будущие слоты.\nВремя указано в часовом поясе: {coach.timezone}",
         reply_markup=coach_slots_keyboard(slots, coach.timezone),
     )
+
 
 @router.callback_query(F.data.startswith("schedule:open_slot:"))
 async def open_slot_handler(callback: CallbackQuery) -> None:
@@ -269,13 +257,10 @@ async def open_slot_handler(callback: CallbackQuery) -> None:
     coach = await get_coach_by_telegram_id(callback.from_user.id)
     timezone_name = coach.timezone if coach else "Europe/Prague"
 
-
     await callback.answer()
 
     if card is None:
-        await callback.message.edit_text(
-            "Слот не найден или у вас нет доступа."
-        )
+        await callback.message.edit_text("Слот не найден или у вас нет доступа.")
         return
 
     slot = card.slot
@@ -287,10 +272,7 @@ async def open_slot_handler(callback: CallbackQuery) -> None:
     )
     if slot.status == "available":
         text = (
-            "Карточка слота\n\n"
-            f"Время: {slot_time}\n"
-            f"Часовой пояс: {timezone_name}\n"
-            "Статус: свободен"
+            f"Карточка слота\n\nВремя: {slot_time}\nЧасовой пояс: {timezone_name}\nСтатус: свободен"
         )
 
         await callback.message.edit_text(
@@ -318,9 +300,8 @@ async def open_slot_handler(callback: CallbackQuery) -> None:
         )
         return
 
-    await callback.message.edit_text(
-        "Этот слот уже отменен."
-    )
+    await callback.message.edit_text("Этот слот уже отменен.")
+
 
 @router.callback_query(F.data.startswith("schedule:delete_available:"))
 async def delete_available_slot_handler(callback: CallbackQuery) -> None:
@@ -346,16 +327,15 @@ async def delete_available_slot_handler(callback: CallbackQuery) -> None:
 
     if not slots:
         await callback.message.edit_text(
-            "Слот удален.\n\n"
-            "У вас больше нет будущих активных слотов."
+            "Слот удален.\n\nУ вас больше нет будущих активных слотов."
         )
         return
 
     await callback.message.edit_text(
-        "Слот удален.\n\n"
-        "Ваши будущие слоты:",
+        "Слот удален.\n\nВаши будущие слоты:",
         reply_markup=coach_slots_keyboard(slots),
     )
+
 
 @router.callback_query(F.data.startswith("sc:cb:"))
 async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
@@ -369,9 +349,7 @@ async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if card is None or card.slot.status != "booked":
-        await callback.message.edit_text(
-            "Слот не найден или уже не является занятым."
-        )
+        await callback.message.edit_text("Слот не найден или уже не является занятым.")
         return
 
     client_name = "неизвестный клиент"
@@ -386,6 +364,7 @@ async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
         "Клиент получит уведомление об отмене.",
         reply_markup=confirm_cancel_booked_slot_keyboard(slot_id),
     )
+
 
 @router.callback_query(F.data.startswith("sc:ccb:"))
 async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
@@ -402,9 +381,7 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if not result.ok:
-        await callback.message.edit_text(
-            "Не удалось отменить занятие. Возможно, оно уже отменено."
-        )
+        await callback.message.edit_text("Не удалось отменить занятие. Возможно, оно уже отменено.")
         return
 
     starts_at = result.starts_at
@@ -422,27 +399,25 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
         timezone_name,
     )
 
-    notification_sent = None 
+    notification_sent = None
 
     if result.client_telegram_id is not None:
-        notification_sent = await send_logged_message (
-            bot=callback.bot, 
+        notification_sent = await send_logged_message(
+            bot=callback.bot,
             chat_id=result.client_telegram_id,
             text=(
-                    "Ваше занятие отменено тренером.\n\n"
-                    f"Время: {slot_time}\n"
-                    f"Часовой пояс: {timezone_name}\n\n"
-                    "Вы можете выбрать другое доступное время в боте."
-                ),
+                "Ваше занятие отменено тренером.\n\n"
+                f"Время: {slot_time}\n"
+                f"Часовой пояс: {timezone_name}\n\n"
+                "Вы можете выбрать другое доступное время в боте."
+            ),
             notification_type="appointment_cancelled_by_coach",
             related_entity_type="availability_slot",
             related_entity_id=slot_id,
         )
 
     if notification_sent is not None and notification_sent.ok:
-        await callback.message.edit_text(
-            "Занятие отменено. Клиенту отправлено уведомление."
-        )
+        await callback.message.edit_text("Занятие отменено. Клиенту отправлено уведомление.")
     else:
         await callback.message.edit_text(
             "Занятие отменено, но уведомление клиенту отправить не удалось."

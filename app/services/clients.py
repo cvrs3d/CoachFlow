@@ -1,13 +1,10 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 
-from datetime import datetime, timezone
-
-from app.db.models import AvailabilitySlot
-
 from app.db.database import AsyncSessionLocal, safe_commit
-from app.db.models import Appointment, Client, ClientCoachRelation, Coach, User
+from app.db.models import Appointment, AvailabilitySlot, Client, ClientCoachRelation, Coach, User
 
 
 @dataclass
@@ -112,6 +109,7 @@ async def get_client_card(
             future_appointments_count=future_appointments_count,
         )
 
+
 async def update_client_display_name_for_coach(
     *,
     telegram_id: int,
@@ -165,6 +163,7 @@ async def get_client_display_name_for_coach(
 
     return card.client.display_name
 
+
 async def deactivate_client_for_coach(
     *,
     telegram_id: int,
@@ -215,7 +214,7 @@ async def deactivate_client_for_coach(
             .where(Appointment.client_id == client.id)
             .where(Appointment.coach_id == coach.id)
             .where(Appointment.status == "booked")
-            .where(AvailabilitySlot.starts_at >= datetime.now(timezone.utc))
+            .where(AvailabilitySlot.starts_at >= datetime.now(UTC))
         )
 
         rows = appointments_result.all()

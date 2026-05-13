@@ -1,18 +1,16 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import select, text
-
-from app.services.invites import get_coach_by_telegram_id
+from sqlalchemy import select
 
 from app.db.database import AsyncSessionLocal, safe_commit
 from app.db.models import (
     Appointment,
     AvailabilitySlot,
     Client,
-    Coach,
     User,
 )
+from app.services.invites import get_coach_by_telegram_id
 
 
 @dataclass
@@ -33,7 +31,6 @@ class CancelBookedSlotResult:
     ends_at: str | None = None
 
 
-
 async def list_coach_manageable_slots(
     *,
     telegram_id: int,
@@ -50,7 +47,7 @@ async def list_coach_manageable_slots(
             select(AvailabilitySlot)
             .where(AvailabilitySlot.coach_id == coach.id)
             .where(AvailabilitySlot.status.in_(["available", "booked"]))
-            .where(AvailabilitySlot.starts_at >= datetime.now(timezone.utc))
+            .where(AvailabilitySlot.starts_at >= datetime.now(UTC))
             .order_by(AvailabilitySlot.starts_at.asc())
             .limit(limit)
         )
@@ -120,7 +117,6 @@ async def delete_available_slot_for_coach(
 
     async with session_factory() as session:
         async with session.brgin():
-
             try:
                 result = await session.execute(
                     select(AvailabilitySlot)

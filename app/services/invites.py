@@ -1,7 +1,7 @@
 import secrets
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, text
 
@@ -13,8 +13,6 @@ from app.db.models import (
     InviteCode,
     User,
 )
-
-from app.db.database import safe_commit
 
 
 def generate_invite_code() -> str:
@@ -82,9 +80,7 @@ async def create_invite_for_coach(
         for _ in range(5):
             code = generate_invite_code()
 
-            existing = await session.execute(
-                select(InviteCode).where(InviteCode.code == code)
-            )
+            existing = await session.execute(select(InviteCode).where(InviteCode.code == code))
             if existing.scalar_one_or_none() is not None:
                 continue
 
@@ -95,7 +91,7 @@ async def create_invite_for_coach(
                 status="active",
                 max_uses=max_uses,
                 used_count=0,
-                expires_at=datetime.now(timezone.utc) + timedelta(days=expires_in_days),
+                expires_at=datetime.now(UTC) + timedelta(days=expires_in_days),
             )
 
             session.add(invite)
@@ -175,7 +171,7 @@ async def redeem_invite_code(
                     """),
                     {
                         "code": code,
-                        "dtime_now": datetime.now(timezone.utc),
+                        "dtime_now": datetime.now(UTC),
                     },
                 )
 
@@ -195,7 +191,7 @@ async def redeem_invite_code(
                         telegram_id=telegram_id,
                         username=username,
                         role="client",
-                        status="pending", 
+                        status="pending",
                     )
                     session.add(user)
                     await session.flush()

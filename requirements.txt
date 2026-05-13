@@ -9,3 +9,4 @@ pytest-asyncio
 aiosqlite
 asyncpg==0.30.0
 alembic==1.14.1
+ruff

@@ -46,7 +46,7 @@ MEAL_TYPE_LABELS = {
     "other": "Другое",
 }
 
-#mr:o:<uuid>   open report
+# mr:o:<uuid>   open report
 # mr:ok:<uuid>  verdict ok
 # mr:ni:<uuid>  needs improvement
 # mr:q:<uuid>   question
@@ -123,8 +123,10 @@ def meal_review_keyboard(report_id: str) -> InlineKeyboardMarkup:
         ]
     )
 
+
 # mr:co:<report_id> = meal report client open
 # mr:clist = client reports list
+
 
 def client_meal_reports_keyboard(
     reports: list[MealReport],
@@ -197,6 +199,7 @@ def client_meal_report_card_keyboard(
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
+
 def coach_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -220,6 +223,7 @@ def coach_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
             ],
         ]
     )
+
 
 def coach_client_meal_reports_keyboard(
     items: list[tuple[MealReport, Client]],

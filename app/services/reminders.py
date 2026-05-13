@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta, timezone
+import logging
+from datetime import UTC, datetime, timedelta
 
 from aiogram import Bot
 from sqlalchemy import select
@@ -6,14 +7,11 @@ from sqlalchemy.orm import aliased
 
 from app.db.database import AsyncSessionLocal, safe_commit
 from app.db.models import Appointment, AvailabilitySlot, Client, Coach, User
-
+from app.services.notifications import send_logged_message
 from app.utils.datetime import format_slot_range_for_timezone
 
-from app.services.notifications import send_logged_message, SendNotificationResult
-
-import logging
-
 logger = logging.getLogger(__name__)
+
 
 async def send_appointment_24h_reminders(
     bot: Bot,
@@ -26,10 +24,10 @@ async def send_appointment_24h_reminders(
     Окно 23:50–24:10 нужно, чтобы задача могла запускаться раз в 10 минут.
     """
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     window_start = now + timedelta(hours=23)
     window_end = now + timedelta(hours=25)
-    # -----------------TEST------------------ # 
+    # -----------------TEST------------------ #
     # window_start = now + timedelta(minutes=1)
     # window_end = now + timedelta(minutes=5)
 
@@ -68,17 +66,15 @@ async def send_appointment_24h_reminders(
             window_end.isoformat(),
         )
 
-
         for appointment, slot, client, coach, client_user, coach_user in rows:
             client_sent = False
             coach_sent = False
 
             slot_time = format_slot_range_for_timezone(
-            starts_at = slot.starts_at,
-            ends_at = slot.ends_at,
-            timezone_name = coach.timezone)
+                starts_at=slot.starts_at, ends_at=slot.ends_at, timezone_name=coach.timezone
+            )
 
-            notification_client_result = await send_logged_message (
+            notification_client_result = await send_logged_message(
                 bot=bot,
                 chat_id=client_user.telegram_id,
                 text=(
@@ -104,7 +100,7 @@ async def send_appointment_24h_reminders(
                     },
                 )
 
-            notification_coach_result = await send_logged_message (
+            notification_coach_result = await send_logged_message(
                 bot=bot,
                 chat_id=coach_user.telegram_id,
                 text=(
@@ -131,6 +127,6 @@ async def send_appointment_24h_reminders(
                 )
 
             if client_sent or coach_sent:
-                appointment.reminder_24h_sent_at = datetime.now(timezone.utc)
+                appointment.reminder_24h_sent_at = datetime.now(UTC)
 
         await safe_commit(session)

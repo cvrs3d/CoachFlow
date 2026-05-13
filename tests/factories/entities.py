@@ -1,12 +1,12 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.db.models import (
+    AvailabilitySlot,
     Client,
     ClientCoachRelation,
     Coach,
     User,
-    AvailabilitySlot,
 )
 
 
@@ -99,7 +99,7 @@ async def create_available_slot(
     starts_in_hours: int = 48,
     duration_minutes: int = 60,
 ):
-    starts_at = datetime.now(timezone.utc) + timedelta(hours=starts_in_hours)
+    starts_at = datetime.now(UTC) + timedelta(hours=starts_in_hours)
     ends_at = starts_at + timedelta(minutes=duration_minutes)
 
     slot = AvailabilitySlot(

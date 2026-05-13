@@ -73,4 +73,4 @@ def confirm_cancel_client_booking_keyboard(appointment_id: str) -> InlineKeyboar
                 )
             ],
         ]
-    )   
+    )

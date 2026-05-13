@@ -24,9 +24,7 @@ async def create_invite_button_handler(message: Message) -> None:
     link = f"https://t.me/{bot_user.username}?start={invite.code}"
 
     await message.answer(
-        "Ссылка приглашения создана.\n\n"
-        f"{link}\n\n"
-        "Ссылка одноразовая и действует 7 дней."
+        f"Ссылка приглашения создана.\n\n{link}\n\nСсылка одноразовая и действует 7 дней."
     )
 
 

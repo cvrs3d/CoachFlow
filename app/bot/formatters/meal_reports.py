@@ -1,6 +1,11 @@
-from app.bot.handlers.meal_report_labels import MEAL_TYPE_LABELS, VERDICT_LABELS, REPORT_STATUS_LABELS
+from app.bot.handlers.meal_report_labels import (
+    MEAL_TYPE_LABELS,
+    REPORT_STATUS_LABELS,
+    VERDICT_LABELS,
+)
 
-def format_coach_meal_report_caption(card) -> str: 
+
+def format_coach_meal_report_caption(card) -> str:
     client_name = card.client.display_name or "без имени"
 
     meal_type_label = MEAL_TYPE_LABELS.get(
@@ -17,8 +22,9 @@ def format_coach_meal_report_caption(card) -> str:
 
     if card.report.client_comment:
         caption += f"\n\nКомментарий клиента:\n{card.report.client_comment}"
-    
+
     return caption
+
 
 def format_client_meal_report_caption(card) -> str:
     meal_type_label = MEAL_TYPE_LABELS.get(
@@ -31,11 +37,7 @@ def format_client_meal_report_caption(card) -> str:
         card.report.status,
     )
 
-    caption = (
-        "Ваш отчет еды\n\n"
-        f"Прием пищи: {meal_type_label}\n"
-        f"Статус: {status_label}"
-    )
+    caption = f"Ваш отчет еды\n\nПрием пищи: {meal_type_label}\nСтатус: {status_label}"
 
     if card.report.client_comment:
         caption += f"\n\nВаш комментарий:\n{card.report.client_comment}"
@@ -43,16 +45,12 @@ def format_client_meal_report_caption(card) -> str:
     if card.review is not None:
         verdict_label = VERDICT_LABELS.get(card.review.verdict, card.review.verdict)
 
-        caption += (
-            "\n\nПроверка тренера:"
-            f"\nРезультат: {verdict_label}"
-        )
+        caption += f"\n\nПроверка тренера:\nРезультат: {verdict_label}"
 
         if card.review.comment:
             caption += f"\nКомментарий:\n{card.review.comment}"
 
-        
     if card.report.clarification_response:
         caption += f"\n\nВаш ответ тренеру:\n{card.report.clarification_response}"
-    
+
     return caption

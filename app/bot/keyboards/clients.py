@@ -2,6 +2,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.db.models import Client
 
+
 def client_appointments_keyboard(client_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -66,6 +67,7 @@ def client_card_keyboard(client_id: str) -> InlineKeyboardMarkup:
             ],
         ]
     )
+
 
 def confirm_delete_client_keyboard(client_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
