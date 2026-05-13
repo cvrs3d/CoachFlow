@@ -14,9 +14,11 @@ from app.services.meal_reports import (
     list_meal_reports_for_coach_by_filter,
     review_meal_report,
 )
+from app.bot.formatters.meal_reports import (
+    format_coach_meal_report_caption,
+)
 from app.bot.handlers.meal_report_labels import (
     COACH_REPORT_FILTER_LABELS,
-    MEAL_TYPE_LABELS,
     VERDICT_LABELS,
 )
 from app.services.notifications import send_logged_message
@@ -107,22 +109,7 @@ async def open_meal_report_handler(callback: CallbackQuery) -> None:
         await safe_edit_text(callback.message, "Отчет не найден или у вас нет доступа.")
         return
 
-    meal_type_label = MEAL_TYPE_LABELS.get(
-        card.report.meal_type,
-        card.report.meal_type,
-    )
-
-    client_name = card.client.display_name or "без имени"
-
-    caption = (
-        f"Отчет еды\n\n"
-        f"Клиент: {client_name}\n"
-        f"Прием пищи: {meal_type_label}\n"
-        f"Статус: {card.report.status}"
-    )
-
-    if card.report.client_comment:
-        caption += f"\n\nКомментарий клиента:\n{card.report.client_comment}"
+    caption = format_coach_meal_report_caption(card)
 
     if not card.photo.telegram_file_id:
         await safe_edit_text(callback.message,

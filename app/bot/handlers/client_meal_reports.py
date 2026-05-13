@@ -20,11 +20,9 @@ from app.services.meal_reports import (
 )
 from app.bot.handlers.meal_report_labels import (
     CLIENT_REPORT_FILTER_LABELS,
-    REPORT_STATUS_LABELS,
-    MEAL_TYPE_LABELS,
-    VERDICT_LABELS
 )
 from app.services.notifications import send_logged_message
+from app.bot.formatters.meal_reports import format_client_meal_report_caption
 
 router = Router()
 
@@ -110,40 +108,6 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
         )
         return
 
-    meal_type_label = MEAL_TYPE_LABELS.get(
-        card.report.meal_type,
-        card.report.meal_type,
-    )
-
-    status_label = REPORT_STATUS_LABELS.get(
-        card.report.status,
-        card.report.status,
-    )
-
-    caption = (
-        "Ваш отчет еды\n\n"
-        f"Прием пищи: {meal_type_label}\n"
-        f"Статус: {status_label}"
-    )
-
-    if card.report.client_comment:
-        caption += f"\n\nВаш комментарий:\n{card.report.client_comment}"
-
-    if card.review is not None:
-        verdict_label = VERDICT_LABELS.get(card.review.verdict, card.review.verdict)
-
-        caption += (
-            "\n\nПроверка тренера:"
-            f"\nРезультат: {verdict_label}"
-        )
-
-        if card.review.comment:
-            caption += f"\nКомментарий:\n{card.review.comment}"
-
-        
-    if card.report.clarification_response:
-        caption += f"\n\nВаш ответ тренеру:\n{card.report.clarification_response}"
-
     if not card.photo.telegram_file_id:
         await safe_edit_text(callback.message,
             text="У отчета нет доступного фото.",
@@ -153,6 +117,8 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
             ),
         )
         return
+    
+    caption = format_client_meal_report_caption(card)
 
     await safe_edit_text(callback.message, text="Открываю отчет...")
 
