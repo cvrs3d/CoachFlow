@@ -18,7 +18,7 @@ from app.services.meal_reports import (
     list_meal_reports_for_client_by_filter,
     respond_to_meal_report_clarification,
 )
-from app.bot.handlers.meal_reports import (
+from app.bot.handlers.meal_report_labels import (
     CLIENT_REPORT_FILTER_LABELS,
     REPORT_STATUS_LABELS,
     MEAL_TYPE_LABELS,

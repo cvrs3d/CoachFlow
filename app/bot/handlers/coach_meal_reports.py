@@ -14,7 +14,7 @@ from app.services.meal_reports import (
     list_meal_reports_for_coach_by_filter,
     review_meal_report,
 )
-from app.bot.handlers.meal_reports import (
+from app.bot.handlers.meal_report_labels import (
     COACH_REPORT_FILTER_LABELS,
     MEAL_TYPE_LABELS,
     VERDICT_LABELS,

@@ -7,7 +7,7 @@ from app.bot.states.meal_reports import MealReportStates
 from app.bot.utils.safe_messages import safe_edit_text
 from app.services.meal_reports import create_meal_report_from_photo
 from app.services.notifications import send_logged_message
-from app.bot.handlers.meal_reports import MEAL_TYPE_LABELS
+from app.bot.handlers.meal_report_labels import MEAL_TYPE_LABELS
 
 router = Router()
 
