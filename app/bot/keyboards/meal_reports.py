@@ -158,6 +158,15 @@ def client_meal_reports_keyboard(
             ]
         )
 
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                text="⬅️ К фильтрам",
+                callback_data="mr:cfilters",
+            )
+        ]
+    )
+
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
@@ -181,7 +190,7 @@ def client_meal_report_card_keyboard(
         [
             InlineKeyboardButton(
                 text="⬅️ К моим отчетам",
-                callback_data="mr:clist",
+                callback_data="mr:cfilters",
             )
         ]
     )
@@ -255,3 +264,34 @@ def coach_client_meal_reports_keyboard(
     )
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def client_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="📚 Все",
+                    callback_data="mr:cf:all",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🟡 На проверке",
+                    callback_data="mr:cf:pending",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✅ Проверенные",
+                    callback_data="mr:cf:reviewed",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❓ Нужно уточнение",
+                    callback_data="mr:cf:clarification",
+                )
+            ],
+        ]
+    )

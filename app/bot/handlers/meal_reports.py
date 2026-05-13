@@ -4,11 +4,12 @@ from aiogram.types import CallbackQuery, Message
 
 from app.bot.keyboards.meal_reports import (
     client_meal_report_card_keyboard,
+    client_meal_reports_filter_keyboard,
     client_meal_reports_keyboard,
+    coach_client_meal_reports_keyboard,
+    coach_meal_reports_filter_keyboard,
     meal_review_keyboard,
     meal_type_keyboard,
-    pending_meal_reports_keyboard,
-    coach_meal_reports_filter_keyboard,
     pending_meal_reports_keyboard,
 )
 from app.bot.states.meal_reports import MealReportStates
@@ -17,11 +18,13 @@ from app.services.meal_reports import (
     get_meal_report_for_client,
     get_meal_report_for_coach,
     list_meal_reports_for_client,
+    list_meal_reports_for_client_by_filter,
+    list_meal_reports_for_coach_by_filter,
     list_pending_meal_reports_for_coach,
     review_meal_report,
-    respond_to_meal_report_clarification,
-    list_meal_reports_for_coach_by_filter,
 )
+
+from app.bot.utils.safe_messages import safe_answer_or_edit_text
 
 from app.bot.utils.safe_messages import safe_edit_reply_markup, safe_edit_text
 from app.services.notifications import send_logged_message
@@ -40,6 +43,13 @@ MEAL_TYPE_LABELS = {
     "dinner": "Ужин",
     "snack": "Перекус",
     "other": "Другое",
+}
+
+CLIENT_REPORT_FILTER_LABELS = {
+    "all": "Все отчеты еды",
+    "pending": "Отчеты на проверке",
+    "reviewed": "Проверенные отчеты",
+    "clarification": "Отчеты, где нужно уточнение",
 }
 
 
@@ -459,40 +469,65 @@ REPORT_STATUS_LABELS = {
 
 @router.message(F.text == "🍽 Мои отчеты еды")
 async def my_meal_reports_handler(message: Message) -> None:
-    reports = await list_meal_reports_for_client(
-        telegram_id=message.from_user.id,
-        limit=10,
-    )
-
-    if not reports:
-        await message.answer("У вас пока нет отчетов еды.")
-        return
-
     await message.answer(
-        "Ваши последние отчеты еды:",
-        reply_markup=client_meal_reports_keyboard(reports),
+        "Выберите раздел отчетов еды:",
+        reply_markup=client_meal_reports_filter_keyboard(),
     )
 
+@router.callback_query(F.data == "mr:cfilters")
+async def client_meal_reports_filters_callback_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
 
-@router.callback_query(F.data == "mr:clist")
-async def my_meal_reports_callback_handler(callback: CallbackQuery) -> None:
-    reports = await list_meal_reports_for_client(
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+
+    await callback.message.answer(
+        "Выберите раздел отчетов еды:",
+        reply_markup=client_meal_reports_filter_keyboard(),
+    )
+
+@router.callback_query(F.data.startswith("mr:cf:"))
+async def client_meal_reports_by_filter_handler(callback: CallbackQuery) -> None:
+    report_filter = callback.data.split(":", 2)[2]
+
+    reports = await list_meal_reports_for_client_by_filter(
         telegram_id=callback.from_user.id,
+        report_filter=report_filter,
         limit=10,
     )
 
     await callback.answer()
 
-    
-    await safe_edit_reply_markup(callback.message, reply_markup=None)
+    title = CLIENT_REPORT_FILTER_LABELS.get(report_filter, "Отчеты еды")
 
     if not reports:
-        await callback.message.answer("У вас пока нет отчетов еды.")
+        await callback.message.edit_text(
+            f"{title}.\n\nСписок пуст.",
+            reply_markup=client_meal_reports_filter_keyboard(),
+        )
         return
 
+    await safe_answer_or_edit_text(
+    callback.message,
+    f"{title}:",
+    reply_markup=client_meal_reports_keyboard(reports),
+    )
+
+
+@router.callback_query(F.data == "mr:clist")
+async def my_meal_reports_callback_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+
     await callback.message.answer(
-        "Ваши последние отчеты еды:",
-        reply_markup=client_meal_reports_keyboard(reports),
+        "Выберите раздел отчетов еды:",
+        reply_markup=client_meal_reports_filter_keyboard(),
     )
 
 

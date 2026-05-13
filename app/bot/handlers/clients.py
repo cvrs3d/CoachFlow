@@ -21,6 +21,7 @@ from app.bot.keyboards.clients import client_card_keyboard
 from app.services.client_cards import get_client_card_for_coach
 from app.utils.datetime import format_slot_range_for_timezone
 from app.bot.keyboards.meal_reports import coach_client_meal_reports_keyboard
+from app.services.meal_reports import list_meal_reports_for_coach_client
 router = Router()
 
 

@@ -437,9 +437,11 @@ async def review_meal_report(
             await session.rollback()
             raise
 
-async def list_meal_reports_for_client(
+
+async def list_meal_reports_for_client_by_filter(
     *,
     telegram_id: int,
+    report_filter: str,
     limit: int = 10,
     session_factory=AsyncSessionLocal,
 ) -> list[MealReport]:
@@ -451,16 +453,45 @@ async def list_meal_reports_for_client(
     if context is None:
         return []
 
+    filter_statuses = {
+        "all": None,
+        "pending": ["submitted", "in_review"],
+        "reviewed": ["reviewed"],
+        "clarification": ["needs_clarification"],
+    }
+
+    statuses = filter_statuses.get(report_filter)
+
+    if report_filter not in filter_statuses:
+        return []
+
     async with session_factory() as session:
-        result = await session.execute(
+        statement = (
             select(MealReport)
             .where(MealReport.client_id == context.client.id)
             .order_by(MealReport.submitted_at.desc())
             .limit(limit)
         )
 
-        return list(result.scalars().all())
+        if statuses is not None:
+            statement = statement.where(MealReport.status.in_(statuses))
 
+        result = await session.execute(statement)
+
+        return list(result.scalars().all())
+    
+async def list_meal_reports_for_client(
+    *,
+    telegram_id: int,
+    limit: int = 10,
+    session_factory=AsyncSessionLocal,
+) -> list[MealReport]:
+    return await list_meal_reports_for_client_by_filter(
+        telegram_id=telegram_id,
+        report_filter="all",
+        limit=limit,
+        session_factory=session_factory,
+    )
 
 async def get_meal_report_for_client(
     *,
