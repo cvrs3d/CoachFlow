@@ -17,6 +17,26 @@ class CreateSlotResult:
     starts_at: datetime | None = None
     ends_at: datetime | None = None
 
+from sqlalchemy import select
+
+from app.db.database import AsyncSessionLocal
+from app.db.models import Coach, User
+
+
+async def get_coach_by_telegram_id(
+    telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> Coach | None:
+    async with session_factory() as session:
+        result = await session.execute(
+            select(Coach)
+            .join(User, Coach.user_id == User.id)
+            .where(User.telegram_id == telegram_id)
+            .where(User.role == "coach")
+            .where(User.status == "active")
+        )
+
+        return result.scalar_one_or_none()
 
 def parse_coach_datetime(
     *,
