@@ -2,6 +2,11 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from app.bot.callbacks.meal_reports import (
+    CoachMealReportFilterCallback,
+    OpenCoachMealReportCallback,
+    ReviewMealReportCallback,
+)
 from app.bot.formatters.meal_reports import (
     format_coach_meal_report_caption,
 )
@@ -50,9 +55,12 @@ async def meal_reports_filters_callback_handler(callback: CallbackQuery) -> None
     )
 
 
-@router.callback_query(F.data.startswith("mr:f:"))
-async def coach_meal_reports_by_filter_handler(callback: CallbackQuery) -> None:
-    report_filter = callback.data.split(":", 2)[2]
+@router.callback_query(CoachMealReportFilterCallback.filter())
+async def coach_meal_reports_by_filter_handler(
+    callback: CallbackQuery,
+    callback_data: CoachMealReportFilterCallback,
+) -> None:
+    report_filter = callback_data.report_filter
 
     reports = await list_meal_reports_for_coach_by_filter(
         telegram_id=callback.from_user.id,
@@ -101,9 +109,12 @@ async def pending_meal_reports_callback_handler(callback: CallbackQuery) -> None
     )
 
 
-@router.callback_query(F.data.startswith("mr:o:"))
-async def open_meal_report_handler(callback: CallbackQuery) -> None:
-    report_id = callback.data.split(":", 2)[2]
+@router.callback_query(OpenCoachMealReportCallback.filter())
+async def open_meal_report_handler(
+    callback: CallbackQuery,
+    callback_data: OpenCoachMealReportCallback,
+) -> None:
+    report_id = callback_data.report_id
 
     card = await get_meal_report_for_coach(
         telegram_id=callback.from_user.id,
@@ -132,46 +143,46 @@ async def open_meal_report_handler(callback: CallbackQuery) -> None:
     )
 
 
-@router.callback_query(F.data.startswith("mr:ok:"))
-async def review_meal_report_ok_handler(callback: CallbackQuery) -> None:
-    report_id = callback.data.split(":", 2)[2]
-    await process_meal_report_review(callback, report_id, "ok")
-
-
-@router.callback_query(F.data.startswith("mr:ni:"))
-async def review_meal_report_needs_improvement_handler(
+@router.callback_query(ReviewMealReportCallback.filter())
+async def review_meal_report_handler(
     callback: CallbackQuery,
+    callback_data: ReviewMealReportCallback,
     state: FSMContext,
 ) -> None:
-    report_id = callback.data.split(":", 2)[2]
+    report_id = callback_data.report_id
+    action = callback_data.action
 
-    await state.set_state(MealReportStates.waiting_for_review_comment)
-    await state.update_data(
-        report_id=report_id,
-        verdict="needs_improvement",
-    )
+    if action == "ok":
+        await process_meal_report_review(callback, report_id, "ok")
+        return
 
-    await callback.answer()
+    if action == "needs_improvement":
+        await state.set_state(MealReportStates.waiting_for_review_comment)
+        await state.update_data(
+            report_id=report_id,
+            verdict="needs_improvement",
+        )
 
-    await callback.message.answer("Напишите комментарий для клиента: что нужно улучшить?")
+        await callback.answer()
+        await callback.message.answer(
+            "Напишите комментарий для клиента: что нужно улучшить?"
+        )
+        return
 
+    if action == "question":
+        await state.set_state(MealReportStates.waiting_for_review_comment)
+        await state.update_data(
+            report_id=report_id,
+            verdict="question",
+        )
 
-@router.callback_query(F.data.startswith("mr:q:"))
-async def review_meal_report_question_handler(
-    callback: CallbackQuery,
-    state: FSMContext,
-) -> None:
-    report_id = callback.data.split(":", 2)[2]
+        await callback.answer()
+        await callback.message.answer(
+            "Напишите вопрос или уточнение для клиента."
+        )
+        return
 
-    await state.set_state(MealReportStates.waiting_for_review_comment)
-    await state.update_data(
-        report_id=report_id,
-        verdict="question",
-    )
-
-    await callback.answer()
-
-    await callback.message.answer("Напишите вопрос или уточнение для клиента.")
+    await callback.answer("Неизвестное действие.", show_alert=True)
 
 
 async def process_meal_report_review(

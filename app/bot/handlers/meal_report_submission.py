@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from app.bot.callbacks.meal_reports import MealTypeCallback
 from app.bot.handlers.meal_report_labels import MEAL_TYPE_LABELS
 from app.bot.keyboards.meal_reports import meal_type_keyboard
 from app.bot.states.meal_reports import MealReportStates
@@ -25,12 +26,13 @@ async def start_meal_report_handler(
     )
 
 
-@router.callback_query(F.data.startswith("mr:t:"))
+@router.callback_query(MealTypeCallback.filter())
 async def choose_meal_type_handler(
     callback: CallbackQuery,
+    callback_data: MealTypeCallback,
     state: FSMContext,
 ) -> None:
-    meal_type = callback.data.split(":", 2)[2]
+    meal_type = callback_data.meal_type
 
     if meal_type not in MEAL_TYPE_LABELS:
         await callback.answer("Неизвестный тип приема пищи.", show_alert=True)

@@ -2,6 +2,11 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from app.bot.callbacks.meal_reports import (
+    ClientMealReportFilterCallback,
+    OpenClientMealReportCallback,
+    ReplyMealReportCallback,
+)
 from app.bot.formatters.meal_reports import format_client_meal_report_caption
 from app.bot.handlers.meal_report_labels import (
     CLIENT_REPORT_FILTER_LABELS,
@@ -47,9 +52,12 @@ async def client_meal_reports_filters_callback_handler(callback: CallbackQuery) 
     )
 
 
-@router.callback_query(F.data.startswith("mr:cf:"))
-async def client_meal_reports_by_filter_handler(callback: CallbackQuery) -> None:
-    report_filter = callback.data.split(":", 2)[2]
+@router.callback_query(ClientMealReportFilterCallback.filter())
+async def client_meal_reports_by_filter_handler(
+    callback: CallbackQuery,
+    callback_data: ClientMealReportFilterCallback,
+) -> None:
+    report_filter = callback_data.report_filter
 
     reports = await list_meal_reports_for_client_by_filter(
         telegram_id=callback.from_user.id,
@@ -88,9 +96,12 @@ async def my_meal_reports_callback_handler(callback: CallbackQuery) -> None:
     )
 
 
-@router.callback_query(F.data.startswith("mr:co:"))
-async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
-    report_id = callback.data.split(":", 2)[2]
+@router.callback_query(OpenClientMealReportCallback.filter())
+async def open_client_meal_report_handler(
+    callback: CallbackQuery,
+    callback_data: OpenClientMealReportCallback,
+) -> None:
+    report_id = callback_data.report_id
 
     card = await get_meal_report_for_client(
         telegram_id=callback.from_user.id,
@@ -129,18 +140,18 @@ async def open_client_meal_report_handler(callback: CallbackQuery) -> None:
     )
 
 
-@router.callback_query(F.data.startswith("mr:reply:"))
+@router.callback_query(ReplyMealReportCallback.filter())
 async def start_clarification_response_handler(
     callback: CallbackQuery,
+    callback_data: ReplyMealReportCallback,
     state: FSMContext,
 ) -> None:
-    report_id = callback.data.split(":", 2)[2]
+    report_id = callback_data.report_id
 
     await state.set_state(MealReportStates.waiting_for_clarification_response)
     await state.update_data(report_id=report_id)
 
     await callback.answer()
-
     await callback.message.answer("Напишите ответ тренеру по этому отчету.")
 
 

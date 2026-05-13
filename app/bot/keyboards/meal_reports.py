@@ -4,6 +4,16 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.db.models import Client, MealReport
 
+from app.bot.callbacks.meal_reports import (
+    ClientMealReportFilterCallback,
+    CoachMealReportFilterCallback,
+    MealTypeCallback,
+    OpenClientMealReportCallback,
+    OpenCoachMealReportCallback,
+    ReplyMealReportCallback,
+    ReviewMealReportCallback,
+)
+
 
 def meal_type_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
@@ -11,27 +21,27 @@ def meal_type_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="Завтрак",
-                    callback_data="mr:t:breakfast",
+                    callback_data=MealTypeCallback(meal_type="breakfast").pack(),
                 ),
                 InlineKeyboardButton(
                     text="Обед",
-                    callback_data="mr:t:lunch",
+                    callback_data=MealTypeCallback(meal_type="lunch").pack(),
                 ),
             ],
             [
                 InlineKeyboardButton(
                     text="Ужин",
-                    callback_data="mr:t:dinner",
+                    callback_data=MealTypeCallback(meal_type="dinner").pack(),
                 ),
                 InlineKeyboardButton(
                     text="Перекус",
-                    callback_data="mr:t:snack",
+                    callback_data=MealTypeCallback(meal_type="snack").pack(),
                 ),
             ],
             [
                 InlineKeyboardButton(
                     text="Другое",
-                    callback_data="mr:t:other",
+                    callback_data=MealTypeCallback(meal_type="other").pack(),
                 ),
             ],
         ]
@@ -78,7 +88,7 @@ def pending_meal_reports_keyboard(
             [
                 InlineKeyboardButton(
                     text=f"{client_name} · {meal_type} · {submitted_text} · {status_text}",
-                    callback_data=f"mr:o:{report.id}",
+                    callback_data=OpenCoachMealReportCallback(report_id=report.id).pack(),
                 )
             ]
         )
@@ -101,17 +111,26 @@ def meal_review_keyboard(report_id: str) -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="✅ Хорошо",
-                    callback_data=f"mr:ok:{report_id}",
+                    callback_data=ReviewMealReportCallback(
+                        action="ok",
+                        report_id=report_id,
+                    ).pack(),
                 ),
                 InlineKeyboardButton(
                     text="⚠️ Улучшить",
-                    callback_data=f"mr:ni:{report_id}",
+                    callback_data=ReviewMealReportCallback(
+                        action="needs_improvement",
+                        report_id=report_id,
+                    ).pack(),
                 ),
             ],
             [
                 InlineKeyboardButton(
                     text="❓ Уточнить",
-                    callback_data=f"mr:q:{report_id}",
+                    callback_data=ReviewMealReportCallback(
+                        action="question",
+                        report_id=report_id,
+                    ).pack(),
                 ),
             ],
             [
@@ -155,7 +174,7 @@ def client_meal_reports_keyboard(
             [
                 InlineKeyboardButton(
                     text=f"{meal_type} · {submitted_text} · {status_text}",
-                    callback_data=f"mr:co:{report.id}",
+                    callback_data=OpenClientMealReportCallback(report_id=report.id).pack(),
                 )
             ]
         )
@@ -183,7 +202,7 @@ def client_meal_report_card_keyboard(
             [
                 InlineKeyboardButton(
                     text="✍️ Ответить тренеру",
-                    callback_data=f"mr:reply:{report_id}",
+                    callback_data=ReplyMealReportCallback(report_id=report_id).pack(),
                 )
             ]
         )
@@ -206,19 +225,19 @@ def coach_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="🟡 На проверку",
-                    callback_data="mr:f:pending",
+                    callback_data=CoachMealReportFilterCallback(report_filter="pending").pack(),
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="❓ Нужно уточнение",
-                    callback_data="mr:f:clarification",
+                    callback_data=CoachMealReportFilterCallback(report_filter="clarification").pack(),
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="✅ Проверенные",
-                    callback_data="mr:f:reviewed",
+                    callback_data=CoachMealReportFilterCallback(report_filter="reviewed").pack(),
                 )
             ],
         ]
@@ -276,25 +295,25 @@ def client_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="📚 Все",
-                    callback_data="mr:cf:all",
+                    callback_data=ClientMealReportFilterCallback(report_filter="all").pack(),
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="🟡 На проверке",
-                    callback_data="mr:cf:pending",
+                    callback_data=ClientMealReportFilterCallback(report_filter="pending").pack(),
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="✅ Проверенные",
-                    callback_data="mr:cf:reviewed",
+                    callback_data=ClientMealReportFilterCallback(report_filter="reviewed").pack(),
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="❓ Нужно уточнение",
-                    callback_data="mr:cf:clarification",
+                    callback_data=ClientMealReportFilterCallback(report_filter="clarification").pack(),
                 )
             ],
         ]
