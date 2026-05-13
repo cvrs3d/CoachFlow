@@ -4,24 +4,23 @@ from aiogram.fsm.context import FSMContext
 
 
 from app.bot.keyboards.clients import (
+    client_appointments_keyboard,
+    client_card_keyboard,
     clients_list_keyboard,
     confirm_delete_client_keyboard,
-    client_appointments_keyboard,
 )
+from app.bot.keyboards.meal_reports import coach_client_meal_reports_keyboard
 from app.bot.states.clients import ClientEditStates
+from app.services.client_appointments import list_client_appointments_for_coach
+from app.services.client_cards import get_client_card_for_coach
 from app.services.clients import (
     deactivate_client_for_coach,
     get_client_display_name_for_coach,
     list_clients_for_coach,
     update_client_display_name_for_coach,
 )
-from app.services.client_appointments import list_client_appointments_for_coach
-from app.utils.datetime import format_slot_range_for_timezone
-from app.bot.keyboards.clients import client_card_keyboard
-from app.services.client_cards import get_client_card_for_coach
-from app.utils.datetime import format_slot_range_for_timezone
-from app.bot.keyboards.meal_reports import coach_client_meal_reports_keyboard
 from app.services.meal_reports import list_meal_reports_for_coach_client
+from app.utils.datetime import format_slot_range_for_timezone
 router = Router()
 
 
@@ -294,11 +293,11 @@ async def edit_client_name_process_handler(
         return
 
     result = await get_client_card_for_coach(
-        telegram_id=message.from_user.id,
+        coach_telegram_id=message.from_user.id,
         client_id=client_id,
     )
 
-    if result is None:
+    if result.card is None or not result.ok:
         await message.answer("Имя обновлено.")
         return
 
@@ -314,18 +313,18 @@ async def confirm_delete_client_handler(callback: CallbackQuery) -> None:
     client_id = callback.data.split(":", 2)[2]
 
     result = await get_client_card_for_coach(
-        telegram_id=callback.from_user.id,
+        coach_telegram_id=callback.from_user.id,
         client_id=client_id,
     )
 
     await callback.answer()
 
-    if result is None:
+    if result.card is None or not result.ok:
         await callback.message.edit_text(
             "Клиент не найден или у вас нет доступа."
         )
         return
-    
+
     card = result.card
 
     await callback.message.edit_text(

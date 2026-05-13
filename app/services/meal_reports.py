@@ -16,11 +16,6 @@ from app.db.models import (
 )
 
 @dataclass
-class CoachClientMealReportItem:
-    report: MealReport
-    client: Client
-
-@dataclass
 class ClientMealReportCard:
     report: MealReport
     photo: MealReportPhoto
@@ -142,6 +137,7 @@ async def get_active_client_meal_context(
             select(ClientCoachRelation)
             .where(ClientCoachRelation.client_id == client.id)
             .where(ClientCoachRelation.status == "active")
+            .limit(1)
         )
         relation = relation_result.scalar_one_or_none()
 

@@ -23,10 +23,11 @@ from app.services.meal_reports import (
     review_meal_report,
     respond_to_meal_report_clarification,
 )
-
-from app.bot.utils.safe_messages import safe_answer_or_edit_text
-
-from app.bot.utils.safe_messages import safe_edit_reply_markup, safe_edit_text
+from app.bot.utils.safe_messages import (
+    safe_answer_or_edit_text,
+    safe_edit_reply_markup,
+    safe_edit_text,
+)
 from app.services.notifications import send_logged_message
 
 router = Router()
@@ -443,11 +444,17 @@ async def process_meal_review_comment_handler(
         f"Комментарий отправлен клиенту:\n{comment}"
     )
 
+    notification_type = (
+        "clarification_requested"
+        if verdict == "question"
+        else "meal_report_reviewed"
+    )
+
     if result.client_telegram_id is not None:
         await send_logged_message(
             bot=message.bot,
             chat_id=result.client_telegram_id,
-            notification_type="clarification_requested",
+            notification_type=notification_type,
             related_entity_type="meal_report",
             related_entity_id=report_id,
             text=(
@@ -503,16 +510,17 @@ async def client_meal_reports_by_filter_handler(callback: CallbackQuery) -> None
     title = CLIENT_REPORT_FILTER_LABELS.get(report_filter, "Отчеты еды")
 
     if not reports:
-        await callback.message.edit_text(
+        await safe_answer_or_edit_text(
+            callback.message,
             f"{title}.\n\nСписок пуст.",
             reply_markup=client_meal_reports_filter_keyboard(),
         )
         return
 
     await safe_answer_or_edit_text(
-    callback.message,
-    f"{title}:",
-    reply_markup=client_meal_reports_keyboard(reports),
+        callback.message,
+        f"{title}:",
+        reply_markup=client_meal_reports_keyboard(reports),
     )
 
 

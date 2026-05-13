@@ -1,4 +1,8 @@
+from datetime import datetime
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+from app.db.models import Client, MealReport
 
 
 def meal_type_keyboard() -> InlineKeyboardMarkup:
@@ -32,10 +36,6 @@ def meal_type_keyboard() -> InlineKeyboardMarkup:
             ],
         ]
     )
-
-from datetime import datetime
-
-from app.db.models import Client, MealReport
 
 
 MEAL_TYPE_LABELS = {
