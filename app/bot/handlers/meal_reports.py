@@ -4,13 +4,12 @@ from aiogram.types import CallbackQuery, Message
 
 from app.bot.keyboards.meal_reports import (
     client_meal_report_card_keyboard,
-    client_meal_reports_filter_keyboard,
     client_meal_reports_keyboard,
-    coach_client_meal_reports_keyboard,
     coach_meal_reports_filter_keyboard,
     meal_review_keyboard,
     meal_type_keyboard,
     pending_meal_reports_keyboard,
+    client_meal_reports_filter_keyboard,
 )
 from app.bot.states.meal_reports import MealReportStates
 from app.services.meal_reports import (
@@ -22,6 +21,7 @@ from app.services.meal_reports import (
     list_meal_reports_for_coach_by_filter,
     list_pending_meal_reports_for_coach,
     review_meal_report,
+    respond_to_meal_report_clarification,
 )
 
 from app.bot.utils.safe_messages import safe_answer_or_edit_text
