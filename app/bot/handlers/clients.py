@@ -21,6 +21,7 @@ from app.services.clients import (
 )
 from app.services.meal_reports import list_meal_reports_for_coach_client
 from app.utils.datetime import format_slot_range_for_timezone
+from app.bot.utils.safe_messages import safe_answer_or_edit_text
 router = Router()
 
 
@@ -139,7 +140,10 @@ async def client_card_bookings_handler(callback: CallbackQuery) -> None:
             return
 
         if result.reason == "client_not_found":
-            await callback.message.answer("Клиент не найден или у вас нет доступа.")
+            await safe_answer_or_edit_text(
+                callback.message,
+                "Клиент не найден или у вас нет доступа.",
+            )
             return
 
         await callback.message.answer("Не удалось открыть записи клиента.")
@@ -200,10 +204,14 @@ async def clients_list_callback_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if not clients:
-        await callback.message.edit_text("У вас пока нет активных клиентов.")
+        await safe_answer_or_edit_text(
+            callback.message,
+            "У вас пока нет активных клиентов.",
+        )
         return
 
-    await callback.message.edit_text(
+    await safe_answer_or_edit_text(
+        callback.message,
         "Ваши клиенты:",
         reply_markup=clients_list_keyboard(clients),
     )
@@ -221,7 +229,10 @@ async def open_client_card_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if not result.ok or result.card is None:
-        await callback.message.answer("Клиент не найден или у вас нет доступа.")
+        await safe_answer_or_edit_text(
+            callback.message,
+            "Клиент не найден или у вас нет доступа.",
+        )
         return
 
     await callback.message.answer(
@@ -244,8 +255,9 @@ async def edit_client_name_start_handler(
     await callback.answer()
 
     if current_name is None:
-        await callback.message.edit_text(
-            "Клиент не найден или у вас нет доступа."
+        await safe_answer_or_edit_text(
+            callback.message,
+            "Клиент не найден или у вас нет доступа.",
         )
         return
 
@@ -297,7 +309,7 @@ async def edit_client_name_process_handler(
         client_id=client_id,
     )
 
-    if result.card is None or not result.ok:
+    if not result.ok or result.card is None:
         await message.answer("Имя обновлено.")
         return
 
@@ -319,15 +331,17 @@ async def confirm_delete_client_handler(callback: CallbackQuery) -> None:
 
     await callback.answer()
 
-    if result.card is None or not result.ok:
-        await callback.message.edit_text(
-            "Клиент не найден или у вас нет доступа."
+    if not result.ok or result.card is None:
+        await safe_answer_or_edit_text(
+            callback.message,
+            "Клиент не найден или у вас нет доступа.",
         )
         return
 
     card = result.card
 
-    await callback.message.edit_text(
+    await safe_answer_or_edit_text(
+        callback.message,
         "Удалить клиента?\n\n"
         f"Клиент: {card.client.display_name or 'без имени'}\n\n"
         "Клиент будет деактивирован. Его будущие записи будут отменены, "
@@ -348,21 +362,24 @@ async def delete_client_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if not ok:
-        await callback.message.edit_text(
-            "Не удалось удалить клиента. Клиент не найден или у вас нет доступа."
+        await safe_answer_or_edit_text(
+            callback.message,
+            "Не удалось удалить клиента. Клиент не найден или у вас нет доступа.",
         )
         return
 
     clients = await list_clients_for_coach(callback.from_user.id)
 
     if not clients:
-        await callback.message.edit_text(
+        await safe_answer_or_edit_text(
+            callback.message,
             "Клиент удален.\n\n"
-            "У вас больше нет активных клиентов."
+            "У вас больше нет активных клиентов.",
         )
         return
 
-    await callback.message.edit_text(
+    await safe_answer_or_edit_text(
+        callback.message,
         "Клиент удален.\n\n"
         "Ваши клиенты:",
         reply_markup=clients_list_keyboard(clients),
