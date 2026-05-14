@@ -325,7 +325,7 @@ class MealReportPhoto(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "processing_status IN ('pending', 'stored', 'failed')",
+            "processing_status IN ('pending', 'stored', 'failed', 'archived')",
             name="ck_report_photos_processing",
         ),
         Index("idx_report_photos_report", "report_id"),

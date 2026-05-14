@@ -5,11 +5,51 @@ from aiogram.filters import Command
 from app.bot.keyboards.main_menu import client_main_menu
 from app.bot.texts.privacy import PRIVACY_POLICY_TEXT
 from app.services.users import activate_user_after_consent
-from app.services.privacy import export_user_data
 from aiogram.types import BufferedInputFile
+from app.bot.keyboards.privacy import delete_my_data_confirm_keyboard
+from app.services.privacy import export_user_data, request_data_deletion
 
 router = Router()
 
+@router.message(Command("delete_my_data"))
+async def delete_my_data_command_handler(message: Message) -> None:
+    await message.answer(
+        "Вы можете запросить удаление ваших данных.\n\n"
+        "После обработки запроса бот может перестать работать для вас, "
+        "а тренер может потерять доступ к части ваших данных.\n\n"
+        "Запрос будет создан и обработан администратором.",
+        reply_markup=delete_my_data_confirm_keyboard(),
+    )
+
+
+@router.callback_query(F.data == "privacy:delete_confirm")
+async def confirm_delete_my_data_handler(callback: CallbackQuery) -> None:
+    result = await request_data_deletion(telegram_id=callback.from_user.id)
+
+    await callback.answer()
+
+    if not result.ok:
+        await callback.message.edit_text(
+            "Не удалось создать запрос удаления данных. Профиль пользователя не найден."
+        )
+        return
+
+    if result.reason == "already_pending":
+        await callback.message.edit_text(
+            "Запрос на удаление данных уже создан и ожидает обработки."
+        )
+        return
+
+    await callback.message.edit_text(
+        "Запрос на удаление данных создан.\n\n"
+        "Администратор обработает его вручную."
+    )
+
+
+@router.callback_query(F.data == "privacy:delete_cancel")
+async def cancel_delete_my_data_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
+    await callback.message.edit_text("Запрос удаления данных отменен.")
 
 @router.message(Command("export_my_data"))
 async def export_my_data_command_handler(message: Message) -> None:
