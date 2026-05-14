@@ -4,6 +4,7 @@ import logging
 from aiogram import Bot, Dispatcher
 
 from app.bot.handlers import (
+    meal_checkins,
     booking,
     client_bookings,
     clients,
@@ -47,6 +48,7 @@ async def main() -> None:
     dp.include_router(client_bookings.router)
     dp.include_router(clients.router)
     dp.include_router(meal_reports.router)
+    dp.include_router(meal_checkins.router)
     dp.include_router(menu.router)
 
     await setup_default_commands(bot)

@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -14,6 +14,8 @@ from app.db.models import (
     MealCheckinSchedule,
     User,
 )
+from aiogram import Bot
+from app.services.notifications import send_logged_message
 
 
 DEFAULT_MEAL_SCHEDULES = [
@@ -22,6 +24,19 @@ DEFAULT_MEAL_SCHEDULES = [
     ("dinner", "19:00"),
 ]
 
+MEAL_TYPE_LABELS = {
+    "breakfast": "завтрака",
+    "lunch": "обеда",
+    "dinner": "ужина",
+    "snack": "перекуса",
+    "other": "приема пищи",
+}
+
+@dataclass
+class SendDueMealCheckinsResult:
+    sent_count: int = 0
+    failed_count: int = 0
+    skipped_count: int = 0
 
 @dataclass
 class EnsureDefaultMealSchedulesResult:
@@ -36,6 +51,12 @@ class GenerateMealCheckinsResult:
     reason: str | None = None
     created_count: int = 0
 
+@dataclass
+class MealCheckinScheduleListResult:
+    ok: bool
+    reason: str | None = None
+    timezone_name: str | None = None
+    schedules: list[MealCheckinSchedule] | None = None
 
 async def ensure_default_meal_checkin_schedules_for_coach(
     *,
@@ -202,3 +223,100 @@ def _local_datetime_to_utc(
     )
 
     return local_dt.astimezone(timezone.utc)
+
+async def list_meal_checkin_schedules_for_coach(
+    *,
+    coach_telegram_id: int,
+    session_factory=AsyncSessionLocal,
+) -> MealCheckinScheduleListResult:
+    async with session_factory() as session:
+        coach_result = await session.execute(
+            select(Coach, User)
+            .join(User, Coach.user_id == User.id)
+            .where(User.telegram_id == coach_telegram_id)
+            .where(User.role == "coach")
+            .where(User.status == "active")
+        )
+        row = coach_result.one_or_none()
+
+        if row is None:
+            return MealCheckinScheduleListResult(
+                ok=False,
+                reason="coach_not_found",
+            )
+
+        coach, user = row
+
+        schedules_result = await session.execute(
+            select(MealCheckinSchedule)
+            .where(MealCheckinSchedule.coach_id == coach.id)
+            .where(MealCheckinSchedule.is_active.is_(True))
+            .order_by(MealCheckinSchedule.local_time.asc())
+        )
+
+        return MealCheckinScheduleListResult(
+            ok=True,
+            timezone_name=coach.timezone or "Europe/Prague",
+            schedules=list(schedules_result.scalars().all()),
+        )
+    
+async def send_due_meal_checkin_requests(
+    *,
+    bot: Bot,
+    lookback_minutes: int = 30,
+    limit: int = 50,
+    session_factory=AsyncSessionLocal,
+) -> SendDueMealCheckinsResult:
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(minutes=lookback_minutes)
+
+    result_summary = SendDueMealCheckinsResult()
+
+    async with session_factory() as session:
+        checkins_result = await session.execute(
+            select(MealCheckin, Client, User, Coach)
+            .join(Client, MealCheckin.client_id == Client.id)
+            .join(User, Client.user_id == User.id)
+            .join(Coach, MealCheckin.coach_id == Coach.id)
+            .join(
+                ClientCoachRelation,
+                ClientCoachRelation.client_id == Client.id,
+            )
+            .where(ClientCoachRelation.coach_id == MealCheckin.coach_id)
+            .where(ClientCoachRelation.status == "active")
+            .where(Client.status == "active")
+            .where(User.status == "active")
+            .where(MealCheckin.status == "pending")
+            .where(MealCheckin.scheduled_at <= now)
+            .where(MealCheckin.scheduled_at >= window_start)
+            .order_by(MealCheckin.scheduled_at.asc())
+            .limit(limit)
+        )
+
+        rows = checkins_result.all()
+
+        for checkin, client, user, coach in rows:
+            meal_label = MEAL_TYPE_LABELS.get(checkin.meal_type, "приема пищи")
+
+            send_result = await send_logged_message(
+                bot=bot,
+                chat_id=user.telegram_id,
+                notification_type="meal_checkin_request",
+                related_entity_type="meal_checkin",
+                related_entity_id=checkin.id,
+                text=(
+                    f"Пора отправить фото {meal_label}.\n\n"
+                    "Откройте “🍽 Отправить фото еды” и отправьте фото."
+                ),
+                session_factory=session_factory,
+            )
+
+            if send_result.ok:
+                checkin.status = "sent"
+                result_summary.sent_count += 1
+            else:
+                result_summary.failed_count += 1
+
+        await session.commit()
+
+    return result_summary

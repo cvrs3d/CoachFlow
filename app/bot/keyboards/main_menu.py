@@ -16,6 +16,7 @@ def coach_main_menu() -> ReplyKeyboardMarkup:
             ],
             [
                 KeyboardButton(text="🍽 Отчеты еды"),
+                KeyboardButton(text="🍽 Расписание питания"),
             ],
         ],
         resize_keyboard=True,
