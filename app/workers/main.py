@@ -8,6 +8,8 @@ from aiogram import Bot
 from app.core.config import settings
 from app.services.meal_checkins import send_due_meal_checkin_requests
 from app.services.reminders import send_appointment_24h_reminders
+from app.services.privacy import archive_old_meal_report_photo_references
+from app.core.logging import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,7 @@ async def run_periodically(name: str, interval_seconds: int, func):
 
 
 async def main() -> None:
+    setup_logging(debug=False)
     bot = Bot(token=settings.bot_token)
 
     try:
@@ -37,6 +40,11 @@ async def main() -> None:
                 "meal_checkins",
                 60,
                 lambda: send_due_meal_checkin_requests(bot=bot),
+            ),
+            run_periodically(
+                "privacy_retention_cleanup",
+                86400,
+                lambda: archive_old_meal_report_photo_references(older_than_days=180),
             ),
         )
     finally:
