@@ -415,3 +415,30 @@ class NotificationLog(Base):
             "related_entity_id",
         ),
     )
+
+
+class DataDeletionRequest(Base):
+    __tablename__ = "data_deletion_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    admin_note: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'processed', 'rejected')",
+            name="ck_data_deletion_requests_status",
+        ),
+        Index("idx_data_deletion_requests_status_requested", "status", "requested_at"),
+        Index("idx_data_deletion_requests_user", "user_id"),
+    )

@@ -18,3 +18,21 @@ def privacy_consent_keyboard() -> InlineKeyboardMarkup:
             ],
         ]
     )
+
+def delete_my_data_confirm_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Подтвердить запрос удаления",
+                    callback_data="privacy:delete_confirm",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Отмена",
+                    callback_data="privacy:delete_cancel",
+                )
+            ],
+        ]
+    )
