@@ -215,6 +215,46 @@ class MealCheckin(Base):
         Index("idx_checkins_client_status_scheduled", "client_id", "status", "scheduled_at"),
     )
 
+class MealCheckinSchedule(Base):
+    __tablename__ = "meal_checkin_schedules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+
+    coach_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("coaches.id"),
+        nullable=False,
+    )
+
+    meal_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    local_time: Mapped[str] = mapped_column(String(5), nullable=False)
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "meal_type IN ('breakfast', 'lunch', 'dinner', 'snack', 'other')",
+            name="ck_checkin_schedules_meal_type",
+        ),
+        UniqueConstraint(
+            "coach_id",
+            "meal_type",
+            "local_time",
+            name="uq_checkin_schedule_coach_meal_time",
+        ),
+        Index(
+            "idx_checkin_schedules_coach_active",
+            "coach_id",
+            "is_active",
+        ),
+    )
 
 class MealReport(Base):
     __tablename__ = "meal_reports"
