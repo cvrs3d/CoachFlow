@@ -21,7 +21,6 @@ from app.bot.handlers import (
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.services.bot_commands import setup_default_commands
-from app.workers.scheduler import setup_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +32,6 @@ async def main() -> None:
 
     bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
-
-    scheduler = setup_scheduler(bot)
 
     dp.include_router(common.router)
 

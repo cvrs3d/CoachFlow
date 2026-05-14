@@ -7,7 +7,7 @@ from aiogram import Bot
 
 from app.core.config import settings
 from app.services.meal_checkins import send_due_meal_checkin_requests
-from app.workers.scheduler import send_appointment_24h_reminders
+from app.services.reminders import send_appointment_24h_reminders
 
 logger = logging.getLogger(__name__)
 
