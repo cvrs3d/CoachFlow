@@ -164,9 +164,7 @@ async def review_meal_report_handler(
         )
 
         await callback.answer()
-        await callback.message.answer(
-            "Напишите комментарий для клиента: что нужно улучшить?"
-        )
+        await callback.message.answer("Напишите комментарий для клиента: что нужно улучшить?")
         return
 
     if action == "question":
@@ -177,9 +175,7 @@ async def review_meal_report_handler(
         )
 
         await callback.answer()
-        await callback.message.answer(
-            "Напишите вопрос или уточнение для клиента."
-        )
+        await callback.message.answer("Напишите вопрос или уточнение для клиента.")
         return
 
     await callback.answer("Неизвестное действие.", show_alert=True)

@@ -6,7 +6,11 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 
 from app.db.database import AsyncSessionLocal, safe_commit
-from app.db.models import AvailabilitySlot
+from app.db.models import (
+    AvailabilitySlot,
+    Coach,
+    User,
+)
 
 
 @dataclass
@@ -16,11 +20,6 @@ class CreateSlotResult:
     slot_id: str | None = None
     starts_at: datetime | None = None
     ends_at: datetime | None = None
-
-from sqlalchemy import select
-
-from app.db.database import AsyncSessionLocal
-from app.db.models import Coach, User
 
 
 async def get_coach_by_telegram_id(
@@ -37,6 +36,7 @@ async def get_coach_by_telegram_id(
         )
 
         return result.scalar_one_or_none()
+
 
 def parse_coach_datetime(
     *,

@@ -2,8 +2,6 @@ from datetime import datetime
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from app.db.models import Client, MealReport
-
 from app.bot.callbacks.meal_reports import (
     ClientMealReportFilterCallback,
     CoachMealReportFilterCallback,
@@ -13,6 +11,7 @@ from app.bot.callbacks.meal_reports import (
     ReplyMealReportCallback,
     ReviewMealReportCallback,
 )
+from app.db.models import Client, MealReport
 
 
 def meal_type_keyboard() -> InlineKeyboardMarkup:
@@ -231,7 +230,9 @@ def coach_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="❓ Нужно уточнение",
-                    callback_data=CoachMealReportFilterCallback(report_filter="clarification").pack(),
+                    callback_data=CoachMealReportFilterCallback(
+                        report_filter="clarification"
+                    ).pack(),
                 )
             ],
             [
@@ -250,7 +251,7 @@ def coach_client_meal_reports_keyboard(
 ) -> InlineKeyboardMarkup:
     keyboard = []
 
-    for report, client in items:
+    for report, _client in items:
         meal_type = MEAL_TYPE_LABELS.get(report.meal_type, report.meal_type)
 
         submitted_at = report.submitted_at
@@ -313,7 +314,9 @@ def client_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="❓ Нужно уточнение",
-                    callback_data=ClientMealReportFilterCallback(report_filter="clarification").pack(),
+                    callback_data=ClientMealReportFilterCallback(
+                        report_filter="clarification"
+                    ).pack(),
                 )
             ],
         ]

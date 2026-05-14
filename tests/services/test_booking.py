@@ -2,6 +2,7 @@ from sqlalchemy import select
 
 from app.db.models import Appointment, AvailabilitySlot
 from app.services.booking import book_slot_for_client
+from app.services.client_bookings import cancel_booking_by_client
 from tests.factories.entities import (
     create_available_slot,
     create_client_for_coach,
@@ -81,9 +82,6 @@ async def test_cannot_book_already_booked_slot(session_factory):
     assert first.ok is True
     assert second.ok is False
     assert second.reason == "slot_not_available"
-
-
-from app.services.client_bookings import cancel_booking_by_client
 
 
 async def test_client_can_rebook_same_slot_after_cancellation(session_factory):

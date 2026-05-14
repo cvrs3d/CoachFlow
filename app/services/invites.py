@@ -181,7 +181,6 @@ async def redeem_invite_code(
                     await session.rollback()
                     return RedeemInviteResult(ok=False, reason="invalid_or_used_invite")
 
-                invite_id = invite_row["id"]
                 coach_id = invite_row["coach_id"]
 
                 # 3. Создаем или обновляем user.

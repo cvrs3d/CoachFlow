@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 
 from app.db.database import AsyncSessionLocal, safe_commit
 from app.db.models import Appointment, AvailabilitySlot, Client, ClientCoachRelation, Coach, User
+from app.services.client_cards import get_client_card_for_coach
 
 
 @dataclass

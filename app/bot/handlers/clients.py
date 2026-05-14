@@ -2,7 +2,10 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from app.bot.formatters.clients import *
+from app.bot.formatters.clients import (
+    format_client_appointments_text,
+    format_client_card_text,
+)
 from app.bot.keyboards.clients import (
     client_appointments_keyboard,
     client_card_keyboard,

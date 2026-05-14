@@ -180,7 +180,8 @@ class Appointment(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('booked', 'cancelled_by_client', 'cancelled_by_coach', 'completed', 'no_show')",
+            "status IN ('booked', 'cancelled_by_client', \
+'cancelled_by_coach', 'completed', 'no_show')",
             name="ck_appointments_status",
         ),
         Index("idx_appointments_coach_client", "coach_id", "client_id"),
@@ -241,7 +242,8 @@ class MealReport(Base):
             name="ck_reports_meal_type",
         ),
         CheckConstraint(
-            "status IN ('draft', 'submitted', 'in_review', 'reviewed', 'needs_clarification', 'archived')",
+            "status IN ('draft', 'submitted', 'in_review', \
+'reviewed', 'needs_clarification', 'archived')",
             name="ck_reports_status",
         ),
         Index("idx_reports_coach_status_submitted", "coach_id", "status", "submitted_at"),

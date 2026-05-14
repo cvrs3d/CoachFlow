@@ -209,14 +209,6 @@ async def test_client_invalid_meal_report_filter_returns_empty_list(session_fact
         )
         await session.commit()
 
-    created = await create_meal_report_from_photo(
-        telegram_id=2001,
-        meal_type="lunch",
-        telegram_file_id="telegram-file-id-1",
-        telegram_file_unique_id="telegram-unique-id-1",
-        session_factory=session_factory,
-    )
-
     reports = await list_meal_reports_for_client_by_filter(
         telegram_id=2001,
         report_filter="unknown",

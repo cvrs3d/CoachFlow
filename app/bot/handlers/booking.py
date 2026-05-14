@@ -31,7 +31,8 @@ async def choose_time_handler(message: Message) -> None:
         return
 
     await message.answer(
-        f"Выберите доступное время.\nВремя указано в часовом поясе тренера: {context.coach.timezone}",
+        f"Выберите доступное время.\nВремя указано в часовом поясе \
+тренера: {context.coach.timezone}",
         reply_markup=available_slots_keyboard(slots, context.coach.timezone),
     )
 
