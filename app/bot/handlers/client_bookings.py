@@ -1,5 +1,6 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
+from app.bot.callbacks.menu import MainMenuCallback
 
 from app.bot.keyboards.client_bookings import (
     client_booking_card_keyboard,
@@ -18,24 +19,24 @@ from app.utils.datetime import format_slot_range_for_timezone
 router = Router()
 
 
-@router.message(F.text == "📋 Мои записи")
-async def my_bookings_handler(message: Message) -> None:
-    context = await get_active_client_context(message.from_user.id)
+@router.callback_query(MainMenuCallback.filter(F.action == "client_bookings"))
+async def my_bookings_handler(callback: CallbackQuery) -> None:
+    context = await get_active_client_context(callback.from_user.id)
 
     if context is None:
-        await message.answer("Не удалось найти активный профиль клиента.")
+        await callback.message.answer("Не удалось найти активный профиль клиента.")
         return
 
     bookings = await list_future_bookings_for_client(
-        telegram_id=message.from_user.id,
+        telegram_id=callback.message.from_user.id,
         limit=10,
     )
 
     if not bookings:
-        await message.answer("У вас нет будущих записей.")
+        await callback.message.answer("У вас нет будущих записей.")
         return
 
-    await message.answer(
+    await callback.message.answer(
         f"Ваши будущие записи.\nВремя указано в часовом поясе тренера: {context.coach.timezone}",
         reply_markup=client_bookings_keyboard(bookings, context.coach.timezone),
     )

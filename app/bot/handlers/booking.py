@@ -1,5 +1,6 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message, BufferedInputFile
+from app.bot.callbacks.menu import MainMenuCallback
 
 from app.bot.keyboards.booking import available_slots_keyboard
 from app.services.booking import (
@@ -17,24 +18,26 @@ from app.utils.datetime import format_slot_range_for_timezone
 router = Router()
 
 
-@router.message(F.text == "📅 Выбрать время")
-async def choose_time_handler(message: Message) -> None:
-    context = await get_active_client_context(message.from_user.id)
+@router.callback_query(MainMenuCallback.filter(F.action == "client_booking"))
+async def choose_time_handler(callback: CallbackQuery) -> None:
+    context = await get_active_client_context(callback.from_user.id)
+
+    await callback.answer()
 
     if context is None:
-        await message.answer("Не удалось найти активный профиль клиента.")
+        await callback.message.answer("Не удалось найти активный профиль клиента.")
         return
 
     slots = await list_available_slots_for_client(
-        telegram_id=message.from_user.id,
+        telegram_id=callback.message.from_user.id,
         limit=10,
     )
 
     if not slots:
-        await message.answer("Сейчас нет доступных слотов для записи.")
+        await callback.message.answer("Сейчас нет доступных слотов для записи.")
         return
 
-    await message.answer(
+    await callback.message.answer(
         f"Выберите доступное время.\nВремя указано в часовом поясе \
 тренера: {context.coach.timezone}",
         reply_markup=available_slots_keyboard(slots, context.coach.timezone),

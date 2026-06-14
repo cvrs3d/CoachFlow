@@ -1,44 +1,86 @@
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from app.bot.callbacks.menu import MainMenuCallback
 from app.bot.i18n import t
 
 
-def coach_main_menu(language_code: str = "ru") -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=t("menu.overview", language_code))],
-            [KeyboardButton(text=t("menu.create_invite", language_code))],
+def coach_main_menu(language_code: str = "ru") -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             [
-                KeyboardButton(text=t("menu.schedule", language_code)),
-                KeyboardButton(text=t("menu.clients", language_code)),
+                InlineKeyboardButton(
+                    text=t("menu.overview", language_code),
+                    callback_data=MainMenuCallback(action="coach_dashboard").pack(),
+                )
             ],
             [
-                KeyboardButton(text=t("menu.meal_reports", language_code)),
-                KeyboardButton(text=t("menu.meal_schedule", language_code)),
+                InlineKeyboardButton(
+                    text=t("menu.create_invite", language_code),
+                    callback_data=MainMenuCallback(action="coach_invite").pack(),
+                )
             ],
-            [KeyboardButton(text=t("menu.language", language_code))],
-        ],
-        resize_keyboard=True,
-        input_field_placeholder=t("menu.placeholder", language_code),
+            [
+                InlineKeyboardButton(
+                    text=t("menu.schedule", language_code),
+                    callback_data=MainMenuCallback(action="coach_schedule").pack(),
+                ),
+                InlineKeyboardButton(
+                    text=t("menu.clients", language_code),
+                    callback_data=MainMenuCallback(action="coach_clients").pack(),
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t("menu.meal_reports", language_code),
+                    callback_data=MainMenuCallback(action="coach_meal_reports").pack(),
+                ),
+                InlineKeyboardButton(
+                    text=t("menu.meal_schedule", language_code),
+                    callback_data=MainMenuCallback(action="coach_meal_schedule").pack(),
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t("menu.language", language_code),
+                    callback_data=MainMenuCallback(action="language").pack(),
+                )
+            ],
+        ]
     )
 
 
-def client_main_menu(language_code: str = "ru") -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[
+def client_main_menu(language_code: str = "ru") -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             [
-                KeyboardButton(text=t("menu.choose_time", language_code)),
-                KeyboardButton(text=t("menu.my_bookings", language_code)),
+                InlineKeyboardButton(
+                    text=t("menu.choose_time", language_code),
+                    callback_data=MainMenuCallback(action="client_booking").pack(),
+                ),
+                InlineKeyboardButton(
+                    text=t("menu.my_bookings", language_code),
+                    callback_data=MainMenuCallback(action="client_bookings").pack(),
+                ),
             ],
             [
-                KeyboardButton(text=t("menu.send_meal_photo", language_code)),
-                KeyboardButton(text=t("menu.my_meal_reports", language_code)),
+                InlineKeyboardButton(
+                    text=t("menu.send_meal_photo", language_code),
+                    callback_data=MainMenuCallback(action="client_meal_submit").pack(),
+                ),
+                InlineKeyboardButton(
+                    text=t("menu.my_meal_reports", language_code),
+                    callback_data=MainMenuCallback(action="client_meal_reports").pack(),
+                ),
             ],
             [
-                KeyboardButton(text=t("menu.profile", language_code)),
-                KeyboardButton(text=t("menu.language", language_code)),
+                InlineKeyboardButton(
+                    text=t("menu.profile", language_code),
+                    callback_data=MainMenuCallback(action="client_profile").pack(),
+                ),
+                InlineKeyboardButton(
+                    text=t("menu.language", language_code),
+                    callback_data=MainMenuCallback(action="language").pack(),
+                ),
             ],
-        ],
-        resize_keyboard=True,
-        input_field_placeholder=t("menu.placeholder", language_code),
+        ]
     )

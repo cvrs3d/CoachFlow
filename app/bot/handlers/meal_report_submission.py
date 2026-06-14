@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.bot.callbacks.meal_reports import MealTypeCallback
+from app.bot.callbacks.menu import MainMenuCallback
 from app.bot.handlers.meal_report_labels import MEAL_TYPE_LABELS
 from app.bot.keyboards.meal_reports import meal_type_keyboard
 from app.bot.states.meal_reports import MealReportStates
@@ -13,14 +14,15 @@ from app.services.notifications import send_logged_message
 router = Router()
 
 
-@router.message(F.text == "🍽 Отправить фото еды")
+@router.callback_query(MainMenuCallback.filter(F.action == "client_meal_submit"))
 async def start_meal_report_handler(
-    message: Message,
+    callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
     await state.clear()
+    await callback.answer()
 
-    await message.answer(
+    await callback.message.answer(
         "Выберите прием пищи:",
         reply_markup=meal_type_keyboard(),
     )

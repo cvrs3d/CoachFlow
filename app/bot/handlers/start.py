@@ -9,6 +9,7 @@ from app.bot.keyboards.privacy import privacy_consent_keyboard
 from app.bot.states.registration import RegistrationStates
 from app.services.invites import redeem_invite_code
 from app.services.users import get_current_user_by_telegram_id
+from app.bot.i18n import get_user_language, t
 
 router = Router()
 
@@ -20,20 +21,21 @@ async def start_handler(
     state: FSMContext,
 ) -> None:
     current = await get_current_user_by_telegram_id(message.from_user.id)
+    language_code = await get_user_language(message.from_user.id)
 
     # 1. Trainer panel
     if current and current.coach and current.user.status == "active":
         await message.answer(
-            "Панель тренера.",
-            reply_markup=coach_main_menu(),
+            t("menu.coach.title", language_code),
+            reply_markup=coach_main_menu(language_code),
         )
         return
 
     # 2. Active clients panel
     if current and current.client and current.user.status == "active":
         await message.answer(
-            "Вы уже зарегистрированы.",
-            reply_markup=client_main_menu(),
+            t("menu.client.title", language_code),
+            reply_markup=client_main_menu(language_code),
         )
         return
 

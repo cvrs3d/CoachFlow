@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from app.bot.callbacks.menu import MainMenuCallback
 from app.bot.formatters.clients import (
     format_client_appointments_text,
     format_client_card_text,
@@ -98,15 +99,14 @@ async def client_card_meal_reports_handler(callback: CallbackQuery) -> None:
     )
 
 
-@router.message(F.text == "👥 Клиенты")
-async def clients_menu_handler(message: Message) -> None:
-    clients = await list_clients_for_coach(message.from_user.id)
-
+@router.callback_query(MainMenuCallback.filter(F.action == "coach_clients"))
+async def clients_menu_handler(callback: CallbackQuery) -> None:
+    clients = await list_clients_for_coach(callback.from_user.id)
     if not clients:
-        await message.answer("У вас пока нет активных клиентов.")
+        await callback.message.answer("У вас пока нет активных клиентов.")
         return
 
-    await message.answer(
+    await callback.message.answer(
         "Ваши клиенты:",
         reply_markup=clients_list_keyboard(clients),
     )

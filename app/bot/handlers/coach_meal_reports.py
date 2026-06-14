@@ -7,6 +7,7 @@ from app.bot.callbacks.meal_reports import (
     OpenCoachMealReportCallback,
     ReviewMealReportCallback,
 )
+from app.bot.callbacks.menu import MainMenuCallback
 from app.bot.formatters.meal_reports import (
     format_coach_meal_report_caption,
 )
@@ -35,9 +36,11 @@ from app.services.notifications import send_logged_message
 router = Router()
 
 
-@router.message(F.text == "🍽 Отчеты еды")
-async def meal_reports_filters_handler(message: Message) -> None:
-    await message.answer(
+@router.callback_query(MainMenuCallback.filter(F.action == "coach_meal_reports"))
+async def meal_reports_filters_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
+
+    await callback.message.answer(
         "Выберите раздел отчетов еды:",
         reply_markup=coach_meal_reports_filter_keyboard(),
     )

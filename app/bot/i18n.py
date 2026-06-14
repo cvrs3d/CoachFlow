@@ -24,6 +24,9 @@ TEXTS = {
         "menu.placeholder": "Выберите действие",
         "language.choose": "Выберите язык интерфейса:",
         "language.updated": "Язык интерфейса обновлен.",
+        "menu.coach.title": "Панель тренера.",
+        "menu.client.title": "Главное меню клиента.",
+        "menu.not_registered": "Для регистрации нужна ссылка приглашения от тренера.",
     },
     "en": {
         "menu.overview": "📊 Overview",
@@ -41,6 +44,9 @@ TEXTS = {
         "menu.placeholder": "Choose an action",
         "language.choose": "Choose interface language:",
         "language.updated": "Interface language updated.",
+        "menu.coach.title": "Coach panel.",
+        "menu.client.title": "Client menu.",
+        "menu.not_registered": "You need an invitation link from your coach to register.",
     },
     "cs": {
         "menu.overview": "📊 Přehled",
@@ -58,6 +64,9 @@ TEXTS = {
         "menu.placeholder": "Vyberte akci",
         "language.choose": "Vyberte jazyk rozhraní:",
         "language.updated": "Jazyk rozhraní byl změněn.",
+        "menu.coach.title": "Panel trenéra.",
+        "menu.client.title": "Menu klienta.",
+        "menu.not_registered": "Pro registraci potřebujete pozvánku od trenéra.",
     },
 }
 

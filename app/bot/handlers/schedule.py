@@ -3,6 +3,7 @@ from datetime import datetime
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, BufferedInputFile
+from app.bot.callbacks.menu import MainMenuCallback
 
 from app.bot.keyboards.schedule import (
     available_slot_management_keyboard,
@@ -36,14 +37,16 @@ from app.utils.datetime import format_slot_range_for_timezone
 router = Router()
 
 
-@router.message(F.text == "📅 Расписание")
-async def schedule_menu_handler(message: Message) -> None:
-    coach = await get_coach_by_telegram_id(message.from_user.id)
+@router.callback_query(MainMenuCallback.filter(F.action == "coach_schedule"))
+async def schedule_menu_handler(callback: CallbackQuery) -> None:
+    coach = await get_coach_by_telegram_id(callback.from_user.id)
+
+    await callback.answer()
 
     if coach is None:
         return
 
-    await message.answer(
+    await callback.message.answer(
         "Расписание тренера.",
         reply_markup=coach_schedule_keyboard(),
     )

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 
+from app.bot.callbacks.menu import MainMenuCallback
 from app.bot.formatters.meal_checkins import format_meal_checkin_schedules_text
 from app.bot.keyboards.meal_checkins import meal_checkin_schedule_keyboard
 from app.bot.utils.safe_messages import safe_answer_or_edit_text
@@ -15,17 +16,17 @@ from app.services.meal_checkins import (
 router = Router()
 
 
-@router.message(F.text == "🍽 Расписание питания")
-async def meal_checkin_schedule_menu_handler(message: Message) -> None:
+@router.callback_query(MainMenuCallback.filter(F.action == "coach_meal_schedule"))
+async def meal_checkin_schedule_menu_handler(callback: CallbackQuery) -> None:
     result = await list_meal_checkin_schedules_for_coach(
-        coach_telegram_id=message.from_user.id,
+        coach_telegram_id=callback.from_user.id,
     )
 
     if not result.ok:
-        await message.answer("Раздел доступен только активному тренеру.")
+        await callback.message.answer("Раздел доступен только активному тренеру.")
         return
 
-    await message.answer(
+    await callback.message.answer(
         format_meal_checkin_schedules_text(result),
         reply_markup=meal_checkin_schedule_keyboard(),
     )

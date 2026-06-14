@@ -1,19 +1,22 @@
 from aiogram import F, Router
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from app.services.dashboard import get_coach_dashboard
+from app.bot.callbacks.menu import MainMenuCallback
 
 router = Router()
 
 
-@router.message(F.text == "📊 Обзор")
-async def coach_dashboard_handler(message: Message) -> None:
+@router.callback_query(MainMenuCallback.filter(F.action == "coach_dashboard"))
+async def coach_dashboard_handler(callback: CallbackQuery) -> None:
     result = await get_coach_dashboard(
-        telegram_id=message.from_user.id,
+        telegram_id=callback.from_user.id,
     )
 
+    await callback.answer()
+
     if not result.ok or result.stats is None:
-        await message.answer("Обзор доступен только активному тренеру.")
+        await callback.message.answer("Обзор доступен только активному тренеру.")
         return
 
     stats = result.stats
@@ -34,4 +37,4 @@ async def coach_dashboard_handler(message: Message) -> None:
         f"🟢 Активных клиентов: {stats.active_clients_count}"
     )
 
-    await message.answer(text)
+    await callback.message.answer(text)
