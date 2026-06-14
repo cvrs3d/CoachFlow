@@ -1,44 +1,44 @@
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
+from app.bot.i18n import t
 
-def coach_main_menu() -> ReplyKeyboardMarkup:
+
+def coach_main_menu(language_code: str = "ru") -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
+            [KeyboardButton(text=t("menu.overview", language_code))],
+            [KeyboardButton(text=t("menu.create_invite", language_code))],
             [
-                KeyboardButton(text="📊 Обзор"),
+                KeyboardButton(text=t("menu.schedule", language_code)),
+                KeyboardButton(text=t("menu.clients", language_code)),
             ],
             [
-                KeyboardButton(text="🔗 Создать приглашение"),
+                KeyboardButton(text=t("menu.meal_reports", language_code)),
+                KeyboardButton(text=t("menu.meal_schedule", language_code)),
             ],
-            [
-                KeyboardButton(text="📅 Расписание"),
-                KeyboardButton(text="👥 Клиенты"),
-            ],
-            [
-                KeyboardButton(text="🍽 Отчеты еды"),
-                KeyboardButton(text="🍽 Расписание питания"),
-            ],
+            [KeyboardButton(text=t("menu.language", language_code))],
         ],
         resize_keyboard=True,
-        input_field_placeholder="Выберите действие",
+        input_field_placeholder=t("menu.placeholder", language_code),
     )
 
 
-def client_main_menu() -> ReplyKeyboardMarkup:
+def client_main_menu(language_code: str = "ru") -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text="📅 Выбрать время"),
-                KeyboardButton(text="📋 Мои записи"),
+                KeyboardButton(text=t("menu.choose_time", language_code)),
+                KeyboardButton(text=t("menu.my_bookings", language_code)),
             ],
             [
-                KeyboardButton(text="🍽 Отправить фото еды"),
-                KeyboardButton(text="🍽 Мои отчеты еды"),
+                KeyboardButton(text=t("menu.send_meal_photo", language_code)),
+                KeyboardButton(text=t("menu.my_meal_reports", language_code)),
             ],
             [
-                KeyboardButton(text="👤 Мой профиль"),
+                KeyboardButton(text=t("menu.profile", language_code)),
+                KeyboardButton(text=t("menu.language", language_code)),
             ],
         ],
         resize_keyboard=True,
-        input_field_placeholder="Выберите действие",
+        input_field_placeholder=t("menu.placeholder", language_code),
     )

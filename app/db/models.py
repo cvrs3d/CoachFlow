@@ -26,6 +26,7 @@ class User(Base):
 
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="client")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    language_code: Mapped[str] = mapped_column(String(10), nullable=False, default="ru")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -34,6 +35,7 @@ class User(Base):
     __table_args__ = (
         CheckConstraint("role IN ('client', 'coach', 'admin')", name="ck_users_role"),
         CheckConstraint("status IN ('pending', 'active', 'blocked')", name="ck_users_status"),
+        CheckConstraint("language_code IN ('ru', 'en', 'cs')", name="ck_users_language_code"),
     )
 
 

@@ -10,6 +10,7 @@ from app.bot.handlers import (
     clients,
     common,
     dashboard,
+    language,
     invites,
     meal_reports,
     menu,
@@ -47,6 +48,7 @@ async def main() -> None:
     dp.include_router(meal_reports.router)
     dp.include_router(meal_checkins.router)
     dp.include_router(menu.router)
+    dp.include_router(language.router)
 
     await setup_default_commands(bot)
 
