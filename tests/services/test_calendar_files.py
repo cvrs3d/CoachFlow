@@ -9,6 +9,10 @@ from app.services.calendar_files import (
 from tests.factories.entities import create_client_for_coach, create_coach
 
 
+FUTURE_START_1 = datetime(2030, 6, 14, 12, 0, tzinfo=UTC)
+FUTURE_START_2 = datetime(2030, 6, 15, 8, 30, tzinfo=UTC)
+
+
 async def _create_booked_appointment(
     session,
     *,
@@ -19,7 +23,7 @@ async def _create_booked_appointment(
     starts_at: datetime | None = None,
     duration_minutes: int = 60,
 ) -> tuple[Appointment, AvailabilitySlot]:
-    starts_at = starts_at or datetime(2026, 6, 14, 12, 0, tzinfo=UTC)
+    starts_at = starts_at or FUTURE_START_1
     ends_at = starts_at + timedelta(minutes=duration_minutes)
 
     slot = AvailabilitySlot(
@@ -29,7 +33,7 @@ async def _create_booked_appointment(
         ends_at=ends_at,
         status="booked",
         booked_by_client_id=client.id,
-        booked_at=datetime(2026, 6, 13, 10, 0, tzinfo=UTC),
+        booked_at=datetime(2030, 6, 13, 10, 0, tzinfo=UTC),
     )
     session.add(slot)
     await session.flush()
@@ -64,13 +68,13 @@ async def test_client_appointment_ics_contains_utc_dates_uid_and_local_descripti
             display_name="Test Client",
         )
 
-        appointment, slot = await _create_booked_appointment(
+        await _create_booked_appointment(
             session,
             coach=coach,
             client=client,
             appointment_id="appointment-123",
             slot_id="slot-123",
-            starts_at=datetime(2026, 6, 14, 12, 0, tzinfo=UTC),
+            starts_at=FUTURE_START_1,
         )
 
         await session.commit()
@@ -91,14 +95,10 @@ async def test_client_appointment_ics_contains_utc_dates_uid_and_local_descripti
     assert "BEGIN:VEVENT" in ics_text
     assert "UID:appointment-123@coachflow" in ics_text
 
-    # DTSTART/DTEND должны быть в UTC и заканчиваться на Z.
-    assert "DTSTART:20260614T120000Z" in ics_text
-    assert "DTEND:20260614T130000Z" in ics_text
+    assert "DTSTART:20300614T120000Z" in ics_text
+    assert "DTEND:20300614T130000Z" in ics_text
 
-    # DESCRIPTION должен содержать локальное время получателя/контекста.
-    # Для Europe/Prague 14 июня 2026 UTC+2:
-    # 12:00 UTC -> 14:00 Prague.
-    assert "Время: 14.06.2026 14:00–15:00" in ics_text
+    assert "Время: 14.06.2030 14:00–15:00" in ics_text
     assert "Часовой пояс: Europe/Prague" in ics_text
 
 
@@ -124,7 +124,7 @@ async def test_client_future_bookings_ics_contains_all_future_booked_appointment
             client=client,
             appointment_id="appointment-1",
             slot_id="slot-1",
-            starts_at=datetime(2026, 6, 14, 12, 0, tzinfo=UTC),
+            starts_at=FUTURE_START_1,
         )
         await _create_booked_appointment(
             session,
@@ -132,7 +132,7 @@ async def test_client_future_bookings_ics_contains_all_future_booked_appointment
             client=client,
             appointment_id="appointment-2",
             slot_id="slot-2",
-            starts_at=datetime(2026, 6, 15, 8, 30, tzinfo=UTC),
+            starts_at=FUTURE_START_2,
         )
 
         await session.commit()
@@ -151,14 +151,14 @@ async def test_client_future_bookings_ics_contains_all_future_booked_appointment
     assert "UID:appointment-1@coachflow" in ics_text
     assert "UID:appointment-2@coachflow" in ics_text
 
-    assert "DTSTART:20260614T120000Z" in ics_text
-    assert "DTEND:20260614T130000Z" in ics_text
+    assert "DTSTART:20300614T120000Z" in ics_text
+    assert "DTEND:20300614T130000Z" in ics_text
 
-    assert "DTSTART:20260615T083000Z" in ics_text
-    assert "DTEND:20260615T093000Z" in ics_text
+    assert "DTSTART:20300615T083000Z" in ics_text
+    assert "DTEND:20300615T093000Z" in ics_text
 
-    assert "Время: 14.06.2026 14:00–15:00" in ics_text
-    assert "Время: 15.06.2026 10:30–11:30" in ics_text
+    assert "Время: 14.06.2030 14:00–15:00" in ics_text
+    assert "Время: 15.06.2030 10:30–11:30" in ics_text
 
 
 async def test_coach_future_bookings_ics_uses_coach_timezone_in_description(
@@ -183,7 +183,7 @@ async def test_coach_future_bookings_ics_uses_coach_timezone_in_description(
             client=client,
             appointment_id="coach-appointment-1",
             slot_id="coach-slot-1",
-            starts_at=datetime(2026, 6, 14, 12, 0, tzinfo=UTC),
+            starts_at=FUTURE_START_1,
         )
 
         await session.commit()
@@ -202,11 +202,11 @@ async def test_coach_future_bookings_ics_uses_coach_timezone_in_description(
     assert "UID:coach-appointment-1@coachflow" in ics_text
     assert "SUMMARY:Тренировка: Ivan Client" in ics_text
 
-    assert "DTSTART:20260614T120000Z" in ics_text
-    assert "DTEND:20260614T130000Z" in ics_text
+    assert "DTSTART:20300614T120000Z" in ics_text
+    assert "DTEND:20300614T130000Z" in ics_text
 
     assert "Клиент: Ivan Client" in ics_text
-    assert "Время: 14.06.2026 14:00–15:00" in ics_text
+    assert "Время: 14.06.2030 14:00–15:00" in ics_text
     assert "Часовой пояс: Europe/Prague" in ics_text
 
 
@@ -238,7 +238,7 @@ async def test_client_appointment_ics_returns_not_found_for_other_client(
             client=client,
             appointment_id="private-appointment",
             slot_id="private-slot",
-            starts_at=datetime(2026, 6, 14, 12, 0, tzinfo=UTC),
+            starts_at=FUTURE_START_1,
         )
 
         await session.commit()
