@@ -1,11 +1,15 @@
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, BufferedInputFile
 
 from app.bot.keyboards.booking import available_slots_keyboard
 from app.services.booking import (
     book_slot_for_client,
     get_active_client_context,
     list_available_slots_for_client,
+)
+from app.services.calendar_files import (
+    build_client_appointment_ics,
+    build_client_future_bookings_ics,
 )
 from app.services.notifications import send_logged_message
 from app.utils.datetime import format_slot_range_for_timezone
@@ -76,6 +80,20 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
             f"Запись подтверждена.\n\nВремя: {slot_time}\nЧасовой пояс: {timezone_name}"
         )
 
+        ics_result = await build_client_appointment_ics(
+            telegram_id=callback.from_user.id,
+            appointment_id=result.appointment_id,
+        )
+
+        if ics_result.ok and ics_result.file_bytes and ics_result.filename:
+            await callback.message.answer_document(
+                BufferedInputFile(
+                    ics_result.file_bytes,
+                    filename=ics_result.filename,
+                ),
+                caption="Файл для добавления записи в календарь.",
+            )
+
         if result.coach_telegram_id is not None:
             await send_logged_message(
                 bot=callback.bot,
@@ -102,3 +120,48 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
         return
 
     await callback.message.edit_text("Не удалось забронировать слот.")
+
+
+@router.callback_query(F.data == "c_b:ics_all")
+async def download_client_future_bookings_ics_handler(callback: CallbackQuery) -> None:
+    result = await build_client_future_bookings_ics(
+        telegram_id=callback.from_user.id,
+    )
+
+    await callback.answer()
+
+    if not result.ok or result.file_bytes is None or result.filename is None:
+        await callback.message.answer("Нет будущих записей для календаря.")
+        return
+
+    await callback.message.answer_document(
+        BufferedInputFile(
+            result.file_bytes,
+            filename=result.filename,
+        ),
+        caption="Файл календаря с вашими будущими записями.",
+    )
+
+
+@router.callback_query(F.data.startswith("c_b:ics:"))
+async def download_client_appointment_ics_handler(callback: CallbackQuery) -> None:
+    appointment_id = callback.data.split(":", 2)[2]
+
+    result = await build_client_appointment_ics(
+        telegram_id=callback.from_user.id,
+        appointment_id=appointment_id,
+    )
+
+    await callback.answer()
+
+    if not result.ok or result.file_bytes is None or result.filename is None:
+        await callback.message.answer("Не удалось подготовить файл календаря.")
+        return
+
+    await callback.message.answer_document(
+        BufferedInputFile(
+            result.file_bytes,
+            filename=result.filename,
+        ),
+        caption="Файл календаря для этой записи.",
+    )

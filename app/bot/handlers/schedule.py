@@ -2,7 +2,7 @@ from datetime import datetime
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, BufferedInputFile
 
 from app.bot.keyboards.schedule import (
     available_slot_management_keyboard,
@@ -20,6 +20,10 @@ from app.services.schedule import (
     create_availability_slot,
     get_coach_by_telegram_id,
     parse_coach_datetime,
+)
+from app.services.calendar_files import (
+    build_coach_future_bookings_ics,
+    build_coach_slot_appointment_ics,
 )
 from app.services.schedule_management import (
     cancel_booked_slot_for_coach,
@@ -436,3 +440,47 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
         await callback.message.edit_text(
             "Занятие отменено, но уведомление клиенту отправить не удалось."
         )
+
+@router.callback_query(F.data == "schedule:ics")
+async def download_coach_future_bookings_ics_handler(callback: CallbackQuery) -> None:
+    result = await build_coach_future_bookings_ics(
+        telegram_id=callback.from_user.id,
+    )
+
+    await callback.answer()
+
+    if not result.ok or result.file_bytes is None or result.filename is None:
+        await callback.message.answer("Нет будущих занятий для календаря.")
+        return
+
+    await callback.message.answer_document(
+        BufferedInputFile(
+            result.file_bytes,
+            filename=result.filename,
+        ),
+        caption="Файл календаря с будущими занятиями.",
+    )
+
+
+@router.callback_query(F.data.startswith("sc:ics:"))
+async def download_coach_slot_appointment_ics_handler(callback: CallbackQuery) -> None:
+    slot_id = callback.data.split(":", 2)[2]
+
+    result = await build_coach_slot_appointment_ics(
+        telegram_id=callback.from_user.id,
+        slot_id=slot_id,
+    )
+
+    await callback.answer()
+
+    if not result.ok or result.file_bytes is None or result.filename is None:
+        await callback.message.answer("Не удалось подготовить файл календаря.")
+        return
+
+    await callback.message.answer_document(
+        BufferedInputFile(
+            result.file_bytes,
+            filename=result.filename,
+        ),
+        caption="Файл календаря для этого занятия.",
+    )

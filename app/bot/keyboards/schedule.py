@@ -22,6 +22,12 @@ def coach_schedule_keyboard() -> InlineKeyboardMarkup:
                     callback_data="schedule:list_slots",
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="📎 Скачать календарь занятий",
+                    callback_data="schedule:ics",
+                )
+            ],
         ]
     )
 
@@ -98,6 +104,12 @@ def booked_slot_management_keyboard(slot_id: str) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text="❌ Отменить занятие и уведомить клиента",
                     callback_data=f"sc:cb:{slot_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📎 Добавить занятие в календарь",
+                    callback_data=f"sc:ics:{slot_id}",
                 )
             ],
             [

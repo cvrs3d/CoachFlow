@@ -26,6 +26,15 @@ def client_bookings_keyboard(
             ]
         )
 
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text="📎 Скачать календарь",
+                    callback_data="c_b:ics_all",
+                )
+            ]
+        )
+
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
@@ -44,6 +53,15 @@ def client_booking_card_keyboard(
                 )
             ]
         )
+    
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                text="📎 Добавить в календарь",
+                callback_data=f"c_b:ics:{appointment_id}",
+            )
+        ]
+    )
 
     keyboard.append(
         [
