@@ -116,7 +116,7 @@ async def delete_available_slot_for_coach(
         return False
 
     async with session_factory() as session:
-        async with session.brgin():
+        async with session.begin():
             try:
                 result = await session.execute(
                     select(AvailabilitySlot)

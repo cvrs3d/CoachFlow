@@ -289,7 +289,8 @@ async def open_slot_handler(callback: CallbackQuery) -> None:
 
         text = (
             "Карточка слота\n\n"
-            f"Время: {slot.starts_at} — {slot.ends_at}\n"
+            f"Время: {slot_time}\n"
+            f"Часовой пояс: {timezone_name}\n"
             "Статус: занят\n"
             f"Клиент: {client_name}"
         )
@@ -331,9 +332,12 @@ async def delete_available_slot_handler(callback: CallbackQuery) -> None:
         )
         return
 
+    coach = await get_coach_by_telegram_id(callback.from_user.id)
+    timezone_name = coach.timezone if coach else "Europe/Prague"
+
     await callback.message.edit_text(
         "Слот удален.\n\nВаши будущие слоты:",
-        reply_markup=coach_slots_keyboard(slots),
+        reply_markup=coach_slots_keyboard(slots, timezone_name),
     )
 
 
@@ -357,10 +361,20 @@ async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
     if card.client is not None:
         client_name = card.client.display_name or "без имени"
 
+    coach = await get_coach_by_telegram_id(callback.from_user.id)
+    timezone_name = coach.timezone if coach else "Europe/Prague"
+
+    slot_time = format_slot_range_for_timezone(
+        card.slot.starts_at,
+        card.slot.ends_at,
+        timezone_name,
+    )
+
     await callback.message.edit_text(
         "Отменить занятие?\n\n"
         f"Клиент: {client_name}\n"
-        f"Время: {card.slot.starts_at} — {card.slot.ends_at}\n\n"
+        f"Время: {slot_time}\n"
+        f"Часовой пояс: {timezone_name}\n\n"
         "Клиент получит уведомление об отмене.",
         reply_markup=confirm_cancel_booked_slot_keyboard(slot_id),
     )
