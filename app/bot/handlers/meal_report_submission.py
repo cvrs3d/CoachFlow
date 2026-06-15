@@ -4,6 +4,8 @@ from aiogram.types import CallbackQuery, Message
 
 from app.bot.callbacks.meal_reports import MealTypeCallback
 from app.bot.callbacks.menu import MainMenuCallback
+from app.bot.i18n import get_user_language, t
+from app.bot.keyboards.common import cancel_keyboard
 from app.bot.handlers.meal_report_labels import MEAL_TYPE_LABELS
 from app.bot.keyboards.meal_reports import meal_type_keyboard
 from app.bot.states.meal_reports import MealReportStates
@@ -35,6 +37,7 @@ async def choose_meal_type_handler(
     state: FSMContext,
 ) -> None:
     meal_type = callback_data.meal_type
+    language_code = await get_user_language(callback.from_user.id)
 
     if meal_type not in MEAL_TYPE_LABELS:
         await callback.answer("Неизвестный тип приема пищи.", show_alert=True)
@@ -51,6 +54,7 @@ async def choose_meal_type_handler(
         f"{MEAL_TYPE_LABELS[meal_type]}\n\n"
         "Теперь отправьте фото еды.\n"
         "Можно добавить подпись к фото, если хотите.",
+        reply_markup=cancel_keyboard(language_code),
     )
 
 
@@ -117,9 +121,11 @@ async def process_meal_photo_handler(
 
 @router.message(MealReportStates.waiting_for_photo)
 async def process_wrong_meal_photo_handler(message: Message) -> None:
+    language_code = await get_user_language(message.from_user.id)
     await message.answer(
         "Пожалуйста, отправьте именно фото еды.\n\n"
-        "Если хотите отменить действие, используйте /cancel."
+        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        reply_markup=cancel_keyboard(language_code),
     )
 
 

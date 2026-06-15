@@ -13,6 +13,8 @@ from app.bot.keyboards.clients import (
     clients_list_keyboard,
     confirm_delete_client_keyboard,
 )
+from app.bot.i18n import get_user_language, t
+from app.bot.keyboards.common import cancel_keyboard
 from app.bot.keyboards.meal_reports import coach_client_meal_reports_keyboard
 from app.bot.states.clients import ClientEditStates
 from app.bot.utils.safe_messages import safe_answer_or_edit_text
@@ -163,6 +165,7 @@ async def edit_client_name_start_handler(
     state: FSMContext,
 ) -> None:
     client_id = callback.data.split(":", 2)[2]
+    language_code = await get_user_language(callback.from_user.id)
 
     current_name = await get_client_display_name_for_coach(
         telegram_id=callback.from_user.id,
@@ -182,7 +185,9 @@ async def edit_client_name_start_handler(
     await state.update_data(client_id=client_id)
 
     await callback.message.answer(
-        f"Введите новое имя клиента.\n\nТекущее имя: {current_name or 'не указано'}"
+        f"Введите новое имя клиента.\n\nТекущее имя: {current_name or 'не указано'}\n\n"
+        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        reply_markup=cancel_keyboard(language_code),
     )
 
 
@@ -191,14 +196,23 @@ async def edit_client_name_process_handler(
     message: Message,
     state: FSMContext,
 ) -> None:
+    language_code = await get_user_language(message.from_user.id)
     new_name = (message.text or "").strip()
 
     if len(new_name) < 2:
-        await message.answer("Имя слишком короткое. Введите минимум 2 символа.")
+        await message.answer(
+            "Имя слишком короткое. Введите минимум 2 символа.\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
+        )
         return
 
     if len(new_name) > 80:
-        await message.answer("Имя слишком длинное. Введите до 80 символов.")
+        await message.answer(
+            "Имя слишком длинное. Введите до 80 символов.\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
+        )
         return
 
     data = await state.get_data()

@@ -8,10 +8,12 @@ from app.bot.callbacks.meal_reports import (
     ReplyMealReportCallback,
 )
 from app.bot.callbacks.menu import MainMenuCallback
+from app.bot.i18n import get_user_language, t
 from app.bot.formatters.meal_reports import format_client_meal_report_caption
 from app.bot.handlers.meal_report_labels import (
     CLIENT_REPORT_FILTER_LABELS,
 )
+from app.bot.keyboards.common import cancel_keyboard
 from app.bot.keyboards.meal_reports import (
     client_meal_report_card_keyboard,
     client_meal_reports_filter_keyboard,
@@ -148,12 +150,17 @@ async def start_clarification_response_handler(
     state: FSMContext,
 ) -> None:
     report_id = callback_data.report_id
+    language_code = await get_user_language(callback.from_user.id)
 
     await state.set_state(MealReportStates.waiting_for_clarification_response)
     await state.update_data(report_id=report_id)
 
     await callback.answer()
-    await callback.message.answer("Напишите ответ тренеру по этому отчету.")
+    await callback.message.answer(
+        f"Напишите ответ тренеру по этому отчету.\n\n"
+        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        reply_markup=cancel_keyboard(language_code),
+    )
 
 
 @router.message(MealReportStates.waiting_for_clarification_response)

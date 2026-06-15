@@ -8,6 +8,7 @@ from app.bot.callbacks.meal_reports import (
     ReviewMealReportCallback,
 )
 from app.bot.callbacks.menu import MainMenuCallback
+from app.bot.i18n import get_user_language, t
 from app.bot.formatters.meal_reports import (
     format_coach_meal_report_caption,
 )
@@ -15,6 +16,7 @@ from app.bot.handlers.meal_report_labels import (
     COACH_REPORT_FILTER_LABELS,
     VERDICT_LABELS,
 )
+from app.bot.keyboards.common import cancel_keyboard
 from app.bot.keyboards.meal_reports import (
     coach_meal_reports_filter_keyboard,
     meal_review_keyboard,
@@ -160,6 +162,7 @@ async def review_meal_report_handler(
         return
 
     if action == "needs_improvement":
+        language_code = await get_user_language(callback.from_user.id)
         await state.set_state(MealReportStates.waiting_for_review_comment)
         await state.update_data(
             report_id=report_id,
@@ -167,10 +170,15 @@ async def review_meal_report_handler(
         )
 
         await callback.answer()
-        await callback.message.answer("Напишите комментарий для клиента: что нужно улучшить?")
+        await callback.message.answer(
+            f"Напишите комментарий для клиента: что нужно улучшить?\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
+        )
         return
 
     if action == "question":
+        language_code = await get_user_language(callback.from_user.id)
         await state.set_state(MealReportStates.waiting_for_review_comment)
         await state.update_data(
             report_id=report_id,
@@ -178,7 +186,11 @@ async def review_meal_report_handler(
         )
 
         await callback.answer()
-        await callback.message.answer("Напишите вопрос или уточнение для клиента.")
+        await callback.message.answer(
+            f"Напишите вопрос или уточнение для клиента.\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
+        )
         return
 
     await callback.answer("Неизвестное действие.", show_alert=True)

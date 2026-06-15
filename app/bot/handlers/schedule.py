@@ -2,8 +2,10 @@ from datetime import datetime
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message, BufferedInputFile
+from aiogram.types import BufferedInputFile, CallbackQuery, InlineKeyboardMarkup, Message
 from app.bot.callbacks.menu import MainMenuCallback
+from app.bot.i18n import get_user_language, t
+from app.bot.keyboards.common import cancel_keyboard
 
 from app.bot.keyboards.schedule import (
     available_slot_management_keyboard,
@@ -37,6 +39,15 @@ from app.utils.datetime import format_slot_range_for_timezone
 router = Router()
 
 
+def _with_cancel_keyboard(
+    keyboard: InlineKeyboardMarkup,
+    language_code: str,
+) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=keyboard.inline_keyboard + cancel_keyboard(language_code).inline_keyboard,
+    )
+
+
 @router.callback_query(MainMenuCallback.filter(F.action == "coach_schedule"))
 async def schedule_menu_handler(callback: CallbackQuery) -> None:
     coach = await get_coach_by_telegram_id(callback.from_user.id)
@@ -58,6 +69,7 @@ async def add_slot_start_handler(
     state: FSMContext,
 ) -> None:
     coach = await get_coach_by_telegram_id(callback.from_user.id)
+    language_code = await get_user_language(callback.from_user.id)
 
     if coach is None:
         await callback.answer()
@@ -66,8 +78,9 @@ async def add_slot_start_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_date)
 
     await callback.message.answer(
-        f"Выберите дату слота.\n\nЧасовой пояс: {coach.timezone}",
-        reply_markup=slot_date_keyboard(coach.timezone),
+        f"Выберите дату слота.\n\nЧасовой пояс: {coach.timezone}\n\n"
+        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        reply_markup=_with_cancel_keyboard(slot_date_keyboard(coach.timezone), language_code),
     )
 
     await callback.answer()
@@ -82,12 +95,15 @@ async def process_slot_date_button_handler(
     state: FSMContext,
 ) -> None:
     date_value = callback.data.split(":", 1)[1]
+    language_code = await get_user_language(callback.from_user.id)
 
     await callback.answer()
 
     if date_value == "manual":
         await callback.message.answer(
-            "Введите дату слота в формате YYYY-MM-DD.\n\nНапример: 2026-05-10"
+            "Введите дату слота в формате YYYY-MM-DD.\n\nНапример: 2026-05-10\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
         )
         return
 
@@ -95,8 +111,9 @@ async def process_slot_date_button_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_start_time)
 
     await callback.message.edit_text(
-        f"Дата выбрана: {date_value}\n\nТеперь выберите время начала:",
-        reply_markup=slot_time_keyboard(start_hour=10, end_hour=18),
+        f"Дата выбрана: {date_value}\n\nТеперь выберите время начала:\n\n"
+        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        reply_markup=_with_cancel_keyboard(slot_time_keyboard(start_hour=10, end_hour=18), language_code),
     )
 
 
@@ -105,13 +122,16 @@ async def process_slot_date_handler(
     message: Message,
     state: FSMContext,
 ) -> None:
+    language_code = await get_user_language(message.from_user.id)
     date_text = (message.text or "").strip()
 
     try:
         datetime.strptime(date_text, "%Y-%m-%d")
     except ValueError:
         await message.answer(
-            "Неверный формат даты.\n\nВведите дату в формате YYYY-MM-DD. Например: 2026-05-10"
+            "Неверный формат даты.\n\nВведите дату в формате YYYY-MM-DD. Например: 2026-05-10\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
         )
         return
 
@@ -119,8 +139,9 @@ async def process_slot_date_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_start_time)
 
     await message.answer(
-        "Дата сохранена.\n\nТеперь выберите время начала:",
-        reply_markup=slot_time_keyboard(start_hour=10, end_hour=18),
+        "Дата сохранена.\n\nТеперь выберите время начала:\n\n"
+        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        reply_markup=_with_cancel_keyboard(slot_time_keyboard(start_hour=10, end_hour=18), language_code),
     )
 
 
@@ -133,19 +154,25 @@ async def process_slot_time_button_handler(
     state: FSMContext,
 ) -> None:
     time_value = callback.data.split(":", 1)[1]
+    language_code = await get_user_language(callback.from_user.id)
 
     await callback.answer()
 
     if time_value == "manual":
-        await callback.message.answer("Введите время начала в формате HH:MM.\n\nНапример: 14:30")
+        await callback.message.answer(
+            "Введите время начала в формате HH:MM.\n\nНапример: 14:30\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
+        )
         return
 
     await state.update_data(slot_start_time=time_value)
     await state.set_state(ScheduleStates.waiting_for_slot_duration)
 
     await callback.message.edit_text(
-        f"Время выбрано: {time_value}\n\nВыберите длительность слота:",
-        reply_markup=slot_duration_keyboard(),
+        f"Время выбрано: {time_value}\n\nВыберите длительность слота:\n\n"
+        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        reply_markup=_with_cancel_keyboard(slot_duration_keyboard(), language_code),
     )
 
 
@@ -154,13 +181,16 @@ async def process_slot_start_time_handler(
     message: Message,
     state: FSMContext,
 ) -> None:
+    language_code = await get_user_language(message.from_user.id)
     time_text = (message.text or "").strip()
 
     try:
         datetime.strptime(time_text, "%H:%M")
     except ValueError:
         await message.answer(
-            "Неверный формат времени.\n\nВведите время в формате HH:MM. Например: 14:30"
+            "Неверный формат времени.\n\nВведите время в формате HH:MM. Например: 14:30\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
         )
         return
 
@@ -168,8 +198,9 @@ async def process_slot_start_time_handler(
     await state.set_state(ScheduleStates.waiting_for_slot_duration)
 
     await message.answer(
-        "Время сохранено.\n\nВыберите длительность слота:",
-        reply_markup=slot_duration_keyboard(),
+        "Время сохранено.\n\nВыберите длительность слота:\n\n"
+        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        reply_markup=_with_cancel_keyboard(slot_duration_keyboard(), language_code),
     )
 
 

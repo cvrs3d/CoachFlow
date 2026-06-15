@@ -30,6 +30,9 @@ TEXTS = {
         "common.cancel": "❌ Отмена",
         "common.no_active_action": "Нет активного действия для отмены.",
         "common.action_cancelled": "Действие отменено.",
+        "common.error": "Произошла ошибка. Попробуйте еще раз.",
+        "common.error": "Произошла ошибка. Попробуйте еще раз.",
+        "common.back": "⬅️ Назад",
     },
     "en": {
         "menu.overview": "📊 Overview",
@@ -53,6 +56,8 @@ TEXTS = {
         "common.cancel": "❌ Cancel",
         "common.no_active_action": "There is no active action to cancel.",
         "common.action_cancelled": "Action cancelled.",
+        "common.error": "An error occurred. Please try again.",
+        "common.back": "⬅️ Back",
     },
     "cs": {
         "menu.overview": "📊 Přehled",
@@ -76,6 +81,8 @@ TEXTS = {
         "common.cancel": "❌ Zrušit",
         "common.no_active_action": "Není aktivní žádná akce ke zrušení.",
         "common.action_cancelled": "Akce byla zrušena.",
+        "common.error": "Došlo k chybě. Zkuste to znovu.",
+        "common.back": "⬅️ Zpět",
     },
 }
 

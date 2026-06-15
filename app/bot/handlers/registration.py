@@ -2,6 +2,8 @@ from aiogram import Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from app.bot.i18n import get_user_language, t
+from app.bot.keyboards.common import cancel_keyboard
 from app.bot.keyboards.privacy import privacy_consent_keyboard
 from app.bot.states.registration import RegistrationStates
 from app.services.users import set_client_display_name
@@ -14,14 +16,23 @@ async def process_display_name_handler(
     message: Message,
     state: FSMContext,
 ) -> None:
+    language_code = await get_user_language(message.from_user.id)
     display_name = (message.text or "").strip()
 
     if len(display_name) < 2:
-        await message.answer("Имя слишком короткое. Введите минимум 2 символа.")
+        await message.answer(
+            "Имя слишком короткое. Введите минимум 2 символа.\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
+        )
         return
 
     if len(display_name) > 80:
-        await message.answer("Имя слишком длинное. Введите до 80 символов.")
+        await message.answer(
+            "Имя слишком длинное. Введите до 80 символов.\n\n"
+            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            reply_markup=cancel_keyboard(language_code),
+        )
         return
 
     ok = await set_client_display_name(
