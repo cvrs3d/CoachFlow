@@ -15,6 +15,7 @@ from app.bot.handlers import (
     meal_reports,
     menu,
     privacy,
+    profile,
     registration,
     schedule,
     start,
@@ -40,6 +41,7 @@ async def main() -> None:
     dp.include_router(invites.router)
     dp.include_router(dashboard.router)
     dp.include_router(privacy.router)
+    dp.include_router(profile.router)
     dp.include_router(registration.router)
     dp.include_router(schedule.router)
     dp.include_router(booking.router)

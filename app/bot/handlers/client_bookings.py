@@ -21,6 +21,8 @@ router = Router()
 
 @router.callback_query(MainMenuCallback.filter(F.action == "client_bookings"))
 async def my_bookings_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
+
     context = await get_active_client_context(callback.from_user.id)
 
     if context is None:
@@ -28,7 +30,7 @@ async def my_bookings_handler(callback: CallbackQuery) -> None:
         return
 
     bookings = await list_future_bookings_for_client(
-        telegram_id=callback.message.from_user.id,
+        telegram_id=callback.from_user.id,
         limit=10,
     )
 
@@ -39,7 +41,7 @@ async def my_bookings_handler(callback: CallbackQuery) -> None:
     await callback.message.answer(
         f"Ваши будущие записи.\nВремя указано в часовом поясе тренера: {context.coach.timezone}",
         reply_markup=client_bookings_keyboard(bookings, context.coach.timezone),
-    )
+    )   
 
 
 @router.callback_query(F.data == "c_b:l")

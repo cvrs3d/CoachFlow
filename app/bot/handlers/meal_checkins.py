@@ -18,6 +18,7 @@ router = Router()
 
 @router.callback_query(MainMenuCallback.filter(F.action == "coach_meal_schedule"))
 async def meal_checkin_schedule_menu_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
     result = await list_meal_checkin_schedules_for_coach(
         coach_telegram_id=callback.from_user.id,
     )

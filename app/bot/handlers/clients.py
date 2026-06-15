@@ -101,6 +101,7 @@ async def client_card_meal_reports_handler(callback: CallbackQuery) -> None:
 
 @router.callback_query(MainMenuCallback.filter(F.action == "coach_clients"))
 async def clients_menu_handler(callback: CallbackQuery) -> None:
+    await callback.answer()
     clients = await list_clients_for_coach(callback.from_user.id)
     if not clients:
         await callback.message.answer("У вас пока нет активных клиентов.")
