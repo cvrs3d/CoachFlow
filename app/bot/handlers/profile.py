@@ -31,7 +31,7 @@ async def client_profile_handler(callback: CallbackQuery) -> None:
         + "\n"
         + t("profile.status", language_code, status=client.status)
         + "\n"
-        + t("profile.language", language_code, language_code=user.language_code)
+        + t("profile.language", language_code, interface_language=user.language_code)
     )
 
     await callback.message.answer(text)

@@ -96,7 +96,6 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
                     ics_result.file_bytes,
                     filename=ics_result.filename,
                 ),
-                caption="Файл для добавления записи в календарь.",
                 caption=t("booking.calendar_caption", language_code),
             )
 
@@ -149,7 +148,6 @@ async def download_client_future_bookings_ics_handler(callback: CallbackQuery) -
             result.file_bytes,
             filename=result.filename,
         ),
-        caption="Файл календаря с вашими будущими записями.",
         caption=t("booking.future_bookings_caption", language_code),
     )
 
@@ -175,6 +173,5 @@ async def download_client_appointment_ics_handler(callback: CallbackQuery) -> No
             result.file_bytes,
             filename=result.filename,
         ),
-        caption="Файл календаря для этой записи.",
         caption=t("booking.calendar_item_caption", language_code),
     )
