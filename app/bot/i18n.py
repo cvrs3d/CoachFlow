@@ -27,6 +27,9 @@ TEXTS = {
         "menu.coach.title": "Панель тренера.",
         "menu.client.title": "Главное меню клиента.",
         "menu.not_registered": "Для регистрации нужна ссылка приглашения от тренера.",
+        "common.cancel": "❌ Отмена",
+        "common.no_active_action": "Нет активного действия для отмены.",
+        "common.action_cancelled": "Действие отменено.",
     },
     "en": {
         "menu.overview": "📊 Overview",
@@ -47,6 +50,9 @@ TEXTS = {
         "menu.coach.title": "Coach panel.",
         "menu.client.title": "Client menu.",
         "menu.not_registered": "You need an invitation link from your coach to register.",
+        "common.cancel": "❌ Cancel",
+        "common.no_active_action": "There is no active action to cancel.",
+        "common.action_cancelled": "Action cancelled.",
     },
     "cs": {
         "menu.overview": "📊 Přehled",
@@ -67,6 +73,9 @@ TEXTS = {
         "menu.coach.title": "Panel trenéra.",
         "menu.client.title": "Menu klienta.",
         "menu.not_registered": "Pro registraci potřebujete pozvánku od trenéra.",
+        "common.cancel": "❌ Zrušit",
+        "common.no_active_action": "Není aktivní žádná akce ke zrušení.",
+        "common.action_cancelled": "Akce byla zrušena.",
     },
 }
 
