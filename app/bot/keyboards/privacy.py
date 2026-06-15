@@ -1,36 +1,38 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from app.bot.i18n import t
 
-def privacy_consent_keyboard() -> InlineKeyboardMarkup:
+
+def privacy_consent_keyboard(language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Согласен",
+                    text=t("privacy.agree", language_code),
                     callback_data="privacy:accept",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="❌ Не согласен",
+                    text=t("privacy.disagree", language_code),
                     callback_data="privacy:decline",
                 )
             ],
         ]
     )
 
-def delete_my_data_confirm_keyboard() -> InlineKeyboardMarkup:
+def delete_my_data_confirm_keyboard(language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Подтвердить запрос удаления",
+                    text=t("privacy.delete_confirm", language_code),
                     callback_data="privacy:delete_confirm",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="❌ Отмена",
+                    text=t("common.cancel", language_code),
                     callback_data="privacy:delete_cancel",
                 )
             ],

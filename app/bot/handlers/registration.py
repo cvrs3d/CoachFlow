@@ -21,16 +21,14 @@ async def process_display_name_handler(
 
     if len(display_name) < 2:
         await message.answer(
-            "Имя слишком короткое. Введите минимум 2 символа.\n\n"
-            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            t("registration.name_too_short", language_code),
             reply_markup=cancel_keyboard(language_code),
         )
         return
 
     if len(display_name) > 80:
         await message.answer(
-            "Имя слишком длинное. Введите до 80 символов.\n\n"
-            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            t("registration.name_too_long", language_code),
             reply_markup=cancel_keyboard(language_code),
         )
         return
@@ -42,19 +40,26 @@ async def process_display_name_handler(
 
     if not ok:
         await state.clear()
-        await message.answer("Не удалось сохранить имя. Попросите тренера отправить новую ссылку.")
+        await message.answer(t("registration.save_failed", language_code))
         return
 
     await state.clear()
 
     await message.answer(
-        "Имя сохранено.\n\n"
-        "Для завершения регистрации нужно согласие на обработку данных.\n\n"
-        "Нажимая “Согласен”, вы соглашаетесь, что бот будет хранить:\n\n"
-        "- ваш Telegram ID;\n"
-        "- имя, указанное для тренера;\n"
-        "- ваши записи к тренеру;\n"
-        "- историю отмен и статусы записей.\n\n"
-        "Данные используются только для организации тренировок.",
-        reply_markup=privacy_consent_keyboard(),
+        t("registration.saved", language_code)
+        + "\n\n"
+        + t("registration.consent_needed", language_code)
+        + "\n\n"
+        + t("registration.consent_text", language_code)
+        + "\n\n"
+        + t("registration.consent_item.telegram_id", language_code)
+        + "\n"
+        + t("registration.consent_item.display_name", language_code)
+        + "\n"
+        + t("registration.consent_item.bookings", language_code)
+        + "\n"
+        + t("registration.consent_item.history", language_code)
+        + "\n\n"
+        + t("registration.consent_footer", language_code),
+        reply_markup=privacy_consent_keyboard(language_code),
     )

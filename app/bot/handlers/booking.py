@@ -1,6 +1,7 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message, BufferedInputFile
 from app.bot.callbacks.menu import MainMenuCallback
+from app.bot.i18n import get_user_language, t
 
 from app.bot.keyboards.booking import available_slots_keyboard
 from app.services.booking import (
@@ -21,6 +22,7 @@ router = Router()
 @router.callback_query(MainMenuCallback.filter(F.action == "client_booking"))
 async def choose_time_handler(callback: CallbackQuery) -> None:
     context = await get_active_client_context(callback.from_user.id)
+    language_code = await get_user_language(callback.from_user.id)
 
     await callback.answer()
 
@@ -38,8 +40,7 @@ async def choose_time_handler(callback: CallbackQuery) -> None:
         return
 
     await callback.message.answer(
-        f"Выберите доступное время.\nВремя указано в часовом поясе \
-тренера: {context.coach.timezone}",
+        t("booking.choose_time", language_code, timezone_name=context.coach.timezone),
         reply_markup=available_slots_keyboard(slots, context.coach.timezone),
     )
 
@@ -47,6 +48,7 @@ async def choose_time_handler(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("book_slot:"))
 async def book_slot_handler(callback: CallbackQuery) -> None:
     slot_id = callback.data.split(":", 1)[1]
+    language_code = await get_user_language(callback.from_user.id)
 
     result = await book_slot_for_client(
         telegram_id=callback.from_user.id,
@@ -80,7 +82,7 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
         )
 
         await callback.message.edit_text(
-            f"Запись подтверждена.\n\nВремя: {slot_time}\nЧасовой пояс: {timezone_name}"
+            await callback.message.edit_text(t("booking.confirmed", language_code, slot_time=slot_time, timezone_name=timezone_name))
         )
 
         ics_result = await build_client_appointment_ics(
@@ -95,6 +97,7 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
                     filename=ics_result.filename,
                 ),
                 caption="Файл для добавления записи в календарь.",
+                caption=t("booking.calendar_caption", language_code),
             )
 
         if result.coach_telegram_id is not None:
@@ -105,28 +108,32 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
                 related_entity_type="appointment",
                 related_entity_id=result.appointment_id,
                 text=(
-                    "Новая запись.\n\n"
-                    f"Клиент: {result.client_display_name or 'без имени'}\n"
-                    f"Время: {slot_time}\n"
-                    f"Часовой пояс: {timezone_name}"
+                    t(
+                        "booking.new_booking_notification",
+                        language_code,
+                        client_name=result.client_display_name or "без имени",
+                        slot_time=slot_time,
+                        timezone_name=timezone_name,
+                    )
                 ),
             )
 
         return
 
     if result.reason == "slot_not_available":
-        await callback.message.edit_text("Это время уже занято. Выберите другой слот.")
+        await callback.message.edit_text(t("booking.slot_taken", language_code))
         return
 
     if result.reason == "client_not_found":
-        await callback.message.edit_text("Не удалось найти активный профиль клиента.")
+        await callback.message.edit_text(t("booking.no_active_client", language_code))
         return
 
-    await callback.message.edit_text("Не удалось забронировать слот.")
+    await callback.message.edit_text(t("booking.book_failed", language_code))
 
 
 @router.callback_query(F.data == "c_b:ics_all")
 async def download_client_future_bookings_ics_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     result = await build_client_future_bookings_ics(
         telegram_id=callback.from_user.id,
     )
@@ -134,7 +141,7 @@ async def download_client_future_bookings_ics_handler(callback: CallbackQuery) -
     await callback.answer()
 
     if not result.ok or result.file_bytes is None or result.filename is None:
-        await callback.message.answer("Нет будущих записей для календаря.")
+        await callback.message.answer(t("booking.no_future_bookings", language_code))
         return
 
     await callback.message.answer_document(
@@ -143,11 +150,13 @@ async def download_client_future_bookings_ics_handler(callback: CallbackQuery) -
             filename=result.filename,
         ),
         caption="Файл календаря с вашими будущими записями.",
+        caption=t("booking.future_bookings_caption", language_code),
     )
 
 
 @router.callback_query(F.data.startswith("c_b:ics:"))
 async def download_client_appointment_ics_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     appointment_id = callback.data.split(":", 2)[2]
 
     result = await build_client_appointment_ics(
@@ -158,7 +167,7 @@ async def download_client_appointment_ics_handler(callback: CallbackQuery) -> No
     await callback.answer()
 
     if not result.ok or result.file_bytes is None or result.filename is None:
-        await callback.message.answer("Не удалось подготовить файл календаря.")
+        await callback.message.answer(t("booking.calendar_prepare_failed", language_code))
         return
 
     await callback.message.answer_document(
@@ -167,4 +176,5 @@ async def download_client_appointment_ics_handler(callback: CallbackQuery) -> No
             filename=result.filename,
         ),
         caption="Файл календаря для этой записи.",
+        caption=t("booking.calendar_item_caption", language_code),
     )

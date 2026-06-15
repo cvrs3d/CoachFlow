@@ -45,23 +45,25 @@ async def start_handler(
         if not current.client.display_name:
             await state.set_state(RegistrationStates.waiting_for_display_name)
             await message.answer(
-                "Регистрация уже начата.\n\nКак вас записать для тренера?\n\n"
-                f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+                t("start.registration_started", language_code),
                 reply_markup=cancel_keyboard(language_code),
             )
             return
 
         await message.answer(
-            "Для завершения регистрации нужно согласие на обработку данных.\n\n"
-            "Нажимая “Согласен”, вы подтверждаете, что ознакомились с политикой обработки данных.\n\n"
-            "Кратко бот хранит:\n"
-            "- Telegram ID;\n"
-            "- имя, указанное для тренера;\n"
-            "- записи к тренеру;\n"
-            "- отчеты еды и Telegram file_id фото;\n"
-            "- статусы проверок и комментарии тренера.\n\n"
-            "Полный текст: /privacy",
-            reply_markup=privacy_consent_keyboard(),
+            t("start.consent_needed", language_code)
+            + "\n\n"
+            + t("start.consent_text", language_code)
+            + "\n\n"
+            + t("start.consent_summary", language_code)
+            + "\n"
+            + "- Telegram ID;\n"
+            + "- имя, указанное для тренера;\n"
+            + "- записи к тренеру;\n"
+            + "- отчеты еды и Telegram file_id фото;\n"
+            + "- статусы проверок и комментарии тренера.\n\n"
+            + t("start.consent_privacy_link", language_code),
+            reply_markup=privacy_consent_keyboard(language_code),
         )
         return
 
@@ -69,7 +71,7 @@ async def start_handler(
 
     # 4. Незарегистрированный пользователь без invite
     if not invite_code:
-        await message.answer("Для регистрации нужна ссылка приглашения от тренера.")
+        await message.answer(t("start.registration_link_required", language_code))
         return
 
     # 5. Новый пользователь с invite
@@ -81,33 +83,31 @@ async def start_handler(
         await state.set_state(RegistrationStates.waiting_for_display_name)
 
         await message.answer(
-            "Ссылка приглашения подтверждена.\n\n"
-            "Как вас записать для тренера?\n\n"
-            "Введите имя, которое будет видно тренеру. Например: Алексей.\n\n"
-            f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+            t("start.invite_confirmed", language_code)
+            + "\n\n"
+            + t("start.name_prompt", language_code)
+            + "\n\n"
+            + t("start.name_example", language_code),
             reply_markup=cancel_keyboard(language_code),
         )
         return
 
     if result.reason == "already_registered":
-        await message.answer("Вы уже зарегистрированы.")
+        await message.answer(t("start.already_registered", language_code))
         return
 
     if result.reason == "pending_consent":
         await message.answer(
-            "Регистрация уже начата.\n\nДля завершения нужно согласие на обработку данных.",
-            reply_markup=privacy_consent_keyboard(),
+            t("start.pending_consent", language_code),
+            reply_markup=privacy_consent_keyboard(language_code),
         )
         return
 
     if result.reason == "invalid_or_used_invite":
-        await message.answer(
-            "Ссылка приглашения недействительна, истекла или уже использована. "
-            "Попросите тренера создать новую ссылку."
-        )
+        await message.answer(t("start.invalid_invite", language_code))
         return
 
-    await message.answer("Не удалось обработать ссылку приглашения.")
+    await message.answer(t("start.processing_failed", language_code))
 
 
 @router.message(Command("health"))

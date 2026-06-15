@@ -2,6 +2,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from app.bot.i18n import get_user_language, t
 from app.services.invites import create_invite_for_coach, get_coach_by_telegram_id
 
 router = Router()
@@ -9,6 +10,7 @@ router = Router()
 
 @router.message(Command("invite"))
 async def create_invite_handler(message: Message) -> None:
+    language_code = await get_user_language(message.from_user.id)
     coach = await get_coach_by_telegram_id(message.from_user.id)
 
     if coach is None:
@@ -23,6 +25,4 @@ async def create_invite_handler(message: Message) -> None:
     bot_user = await message.bot.get_me()
     link = f"https://t.me/{bot_user.username}?start={invite.code}"
 
-    await message.answer(
-        f"Ссылка приглашения создана.\n\n{link}\n\nСсылка одноразовая и действует 7 дней."
-    )
+    await message.answer(t("invite.created", language_code, link=link))

@@ -4,27 +4,28 @@ from zoneinfo import ZoneInfo
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.db.models import AvailabilitySlot
+from app.bot.i18n import t
 from app.utils.datetime import format_slot_range_for_timezone
 
 
-def coach_schedule_keyboard() -> InlineKeyboardMarkup:
+def coach_schedule_keyboard(language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="➕ Добавить слот",
+                    text=t("schedule.add_slot", language_code),
                     callback_data="schedule:add_slot",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="📋 Мои слоты",
+                    text=t("schedule.my_slots", language_code),
                     callback_data="schedule:list_slots",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="📎 Скачать календарь занятий",
+                    text=t("schedule.download_calendar", language_code),
                     callback_data="schedule:ics",
                 )
             ],
@@ -32,16 +33,16 @@ def coach_schedule_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-def slot_duration_keyboard() -> InlineKeyboardMarkup:
+def slot_duration_keyboard(language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="30 мин", callback_data="slot_duration:30"),
-                InlineKeyboardButton(text="45 мин", callback_data="slot_duration:45"),
+                InlineKeyboardButton(text=t("schedule.duration_30", language_code), callback_data="slot_duration:30"),
+                InlineKeyboardButton(text=t("schedule.duration_45", language_code), callback_data="slot_duration:45"),
             ],
             [
-                InlineKeyboardButton(text="60 мин", callback_data="slot_duration:60"),
-                InlineKeyboardButton(text="90 мин", callback_data="slot_duration:90"),
+                InlineKeyboardButton(text=t("schedule.duration_60", language_code), callback_data="slot_duration:60"),
+                InlineKeyboardButton(text=t("schedule.duration_90", language_code), callback_data="slot_duration:90"),
             ],
         ]
     )
@@ -83,13 +84,13 @@ def available_slot_management_keyboard(slot_id: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🗑 Удалить свободный слот",
+                    text=t("schedule.delete_available_slot", "ru"),
                     callback_data=f"schedule:delete_available:{slot_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="⬅️ Назад к слотам",
+                    text=t("common.back", "ru"),
                     callback_data="schedule:list_slots",
                 )
             ],
@@ -102,19 +103,19 @@ def booked_slot_management_keyboard(slot_id: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="❌ Отменить занятие и уведомить клиента",
+                    text=t("schedule.cancel_booked_slot", "ru"),
                     callback_data=f"sc:cb:{slot_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="📎 Добавить занятие в календарь",
+                    text=t("schedule.add_to_calendar", "ru"),
                     callback_data=f"sc:ics:{slot_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="⬅️ Назад к слотам",
+                    text=t("common.back", "ru"),
                     callback_data="schedule:list_slots",
                 )
             ],
@@ -127,13 +128,13 @@ def confirm_cancel_booked_slot_keyboard(slot_id: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Да, отменить",
+                    text=t("schedule.confirm_cancel", "ru"),
                     callback_data=f"sc:ccb:{slot_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="⬅️ Назад",
+                    text=t("common.back", "ru"),
                     callback_data=f"schedule:open_slot:{slot_id}",
                 )
             ],
@@ -172,7 +173,7 @@ def slot_date_keyboard(
     keyboard.append(
         [
             InlineKeyboardButton(
-                text="✍️ Ввести дату вручную",
+                    text=t("schedule.enter_date_manually", "ru"),
                 callback_data="sd:manual",
             )
         ]
@@ -209,7 +210,7 @@ def slot_time_keyboard(
     keyboard.append(
         [
             InlineKeyboardButton(
-                text="✍️ Ввести время вручную",
+                text=t("schedule.enter_time_manually", "ru"),
                 callback_data="st:manual",
             )
         ]
