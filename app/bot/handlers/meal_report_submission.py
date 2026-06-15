@@ -21,12 +21,13 @@ async def start_meal_report_handler(
     callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     await state.clear()
     await callback.answer()
 
     await callback.message.answer(
-        "Выберите прием пищи:",
-        reply_markup=meal_type_keyboard(),
+        t("meal_reports.choose_meal_type", language_code),
+        reply_markup=meal_type_keyboard(language_code),
     )
 
 
@@ -40,7 +41,7 @@ async def choose_meal_type_handler(
     language_code = await get_user_language(callback.from_user.id)
 
     if meal_type not in MEAL_TYPE_LABELS:
-        await callback.answer("Неизвестный тип приема пищи.", show_alert=True)
+        await callback.answer(t("meal_reports.unknown_meal_type", language_code), show_alert=True)
         return
 
     await state.update_data(meal_type=meal_type)
@@ -50,10 +51,10 @@ async def choose_meal_type_handler(
 
     await safe_edit_text(
         callback.message,
-        text="Прием пищи выбран: "
-        f"{MEAL_TYPE_LABELS[meal_type]}\n\n"
-        "Теперь отправьте фото еды.\n"
-        "Можно добавить подпись к фото, если хотите.",
+        text=(
+            f"{t('meal_reports.meal_type_selected', language_code, meal_type_label=MEAL_TYPE_LABELS[meal_type])}\n\n"
+            f"{t('meal_reports.send_photo_prompt', language_code)}"
+        ),
         reply_markup=cancel_keyboard(language_code),
     )
 
@@ -68,7 +69,7 @@ async def process_meal_photo_handler(
 
     if meal_type is None:
         await state.clear()
-        await message.answer("Не удалось определить тип приема пищи. Начните заново.")
+        await message.answer(t("meal_reports.meal_type_unknown_restart", language_code))
         return
 
     photo = message.photo[-1]
@@ -86,22 +87,23 @@ async def process_meal_photo_handler(
 
     if not result.ok:
         if result.reason == "client_not_found":
-            await message.answer("Не удалось найти активный профиль клиента.")
+            await message.answer(t("meal_reports.client_not_found", language_code))
             return
 
         if result.reason == "invalid_meal_type":
-            await message.answer("Некорректный тип приема пищи.")
+            await message.answer(t("meal_reports.invalid_meal_type", language_code))
             return
 
-        await message.answer("Не удалось отправить отчет.")
+        await message.answer(t("meal_reports.send_failed", language_code))
         return
 
-    await message.answer("Отчет отправлен тренеру на проверку.")
+    await message.answer(t("meal_reports.sent_to_coach", language_code))
 
     if result.coach_telegram_id is not None:
+        coach_language_code = await get_user_language(result.coach_telegram_id)
         meal_type_label = MEAL_TYPE_LABELS.get(
             result.meal_type or "",
-            result.meal_type or "не указан",
+            result.meal_type or t("clients.without_name", coach_language_code),
         )
 
         await send_logged_message(
@@ -111,10 +113,10 @@ async def process_meal_photo_handler(
             related_entity_type="meal_report",
             related_entity_id=result.report_id,
             text=(
-                "Новый отчет еды.\n\n"
-                f"Клиент: {result.client_display_name or 'без имени'}\n"
-                f"Прием пищи: {meal_type_label}\n\n"
-                "Откройте раздел “🍽 Отчеты еды”, чтобы проверить отчет."
+                f"{t('meal_reports.coach_notification_title', coach_language_code)}\n\n"
+                f"{t('clients.client_label', coach_language_code, client_name=result.client_display_name or t('clients.without_name', coach_language_code))}\n"
+                f"{t('meal_reports.meal_type_label', coach_language_code, meal_type_label=meal_type_label)}\n\n"
+                f"{t('meal_reports.coach_notification_body', coach_language_code)}"
             ),
         )
 
@@ -123,14 +125,6 @@ async def process_meal_photo_handler(
 async def process_wrong_meal_photo_handler(message: Message) -> None:
     language_code = await get_user_language(message.from_user.id)
     await message.answer(
-        "Пожалуйста, отправьте именно фото еды.\n\n"
-        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        f"{t('meal_reports.photo_only', language_code)}\n\n{t('common.cancel', language_code)} /cancel",
         reply_markup=cancel_keyboard(language_code),
     )
-
-
-VERDICT_LABELS = {
-    "ok": "Хорошо ✅",
-    "needs_improvement": "Нужно улучшить ⚠️",
-    "question": "Нужно уточнение ❓",
-}

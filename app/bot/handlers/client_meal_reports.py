@@ -10,9 +10,7 @@ from app.bot.callbacks.meal_reports import (
 from app.bot.callbacks.menu import MainMenuCallback
 from app.bot.i18n import get_user_language, t
 from app.bot.formatters.meal_reports import format_client_meal_report_caption
-from app.bot.handlers.meal_report_labels import (
-    CLIENT_REPORT_FILTER_LABELS,
-)
+from app.bot.handlers.meal_report_labels import get_client_report_filter_label
 from app.bot.keyboards.common import cancel_keyboard
 from app.bot.keyboards.meal_reports import (
     client_meal_report_card_keyboard,
@@ -36,22 +34,24 @@ router = Router()
 
 @router.callback_query(MainMenuCallback.filter(F.action == "client_meal_reports"))
 async def my_meal_reports_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     await callback.answer()
 
     await callback.message.answer(
-        "Выберите раздел отчетов еды:",
-        reply_markup=client_meal_reports_filter_keyboard(),
+        t("meal_reports.choose_section", language_code),
+        reply_markup=client_meal_reports_filter_keyboard(language_code),
     )
 
 @router.callback_query(F.data == "mr:cfilters")
 async def client_meal_reports_filters_callback_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     await callback.answer()
 
     await safe_edit_reply_markup(callback.message, reply_markup=None)
 
     await callback.message.answer(
-        "Выберите раздел отчетов еды:",
-        reply_markup=client_meal_reports_filter_keyboard(),
+        t("meal_reports.choose_section", language_code),
+        reply_markup=client_meal_reports_filter_keyboard(language_code),
     )
 
 
@@ -61,6 +61,7 @@ async def client_meal_reports_by_filter_handler(
     callback_data: ClientMealReportFilterCallback,
 ) -> None:
     report_filter = callback_data.report_filter
+    language_code = await get_user_language(callback.from_user.id)
 
     reports = await list_meal_reports_for_client_by_filter(
         telegram_id=callback.from_user.id,
@@ -70,32 +71,33 @@ async def client_meal_reports_by_filter_handler(
 
     await callback.answer()
 
-    title = CLIENT_REPORT_FILTER_LABELS.get(report_filter, "Отчеты еды")
+    title = get_client_report_filter_label(report_filter, language_code)
 
     if not reports:
         await safe_answer_or_edit_text(
             callback.message,
-            f"{title}.\n\nСписок пуст.",
-            reply_markup=client_meal_reports_filter_keyboard(),
+            f"{title}.\n\n{t('meal_reports.empty', language_code)}",
+            reply_markup=client_meal_reports_filter_keyboard(language_code),
         )
         return
 
     await safe_answer_or_edit_text(
         callback.message,
         f"{title}:",
-        reply_markup=client_meal_reports_keyboard(reports),
+        reply_markup=client_meal_reports_keyboard(reports, language_code),
     )
 
 
 @router.callback_query(F.data == "mr:clist")
 async def my_meal_reports_callback_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     await callback.answer()
 
     await safe_edit_reply_markup(callback.message, reply_markup=None)
 
     await callback.message.answer(
-        "Выберите раздел отчетов еды:",
-        reply_markup=client_meal_reports_filter_keyboard(),
+        t("meal_reports.choose_section", language_code),
+        reply_markup=client_meal_reports_filter_keyboard(language_code),
     )
 
 
@@ -105,6 +107,7 @@ async def open_client_meal_report_handler(
     callback_data: OpenClientMealReportCallback,
 ) -> None:
     report_id = callback_data.report_id
+    language_code = await get_user_language(callback.from_user.id)
 
     card = await get_meal_report_for_client(
         telegram_id=callback.from_user.id,
@@ -114,23 +117,24 @@ async def open_client_meal_report_handler(
     await callback.answer()
 
     if card is None:
-        await safe_edit_text(callback.message, text="Отчет не найден или у вас нет доступа.")
+        await safe_edit_text(callback.message, text=t("meal_reports.report_not_found", language_code))
         return
 
     if not card.photo.telegram_file_id:
         await safe_edit_text(
             callback.message,
-            text="У отчета нет доступного фото.",
+            text=t("meal_reports.no_photo", language_code),
             reply_markup=client_meal_report_card_keyboard(
                 report_id=card.report.id,
                 can_reply=card.report.status == "needs_clarification",
+                language_code=language_code,
             ),
         )
         return
 
-    caption = format_client_meal_report_caption(card)
+    caption = format_client_meal_report_caption(card, language_code)
 
-    await safe_edit_text(callback.message, text="Открываю отчет...")
+    await safe_edit_text(callback.message, text=t("meal_reports.opening", language_code))
 
     await callback.bot.send_photo(
         chat_id=callback.message.chat.id,
@@ -139,6 +143,7 @@ async def open_client_meal_report_handler(
         reply_markup=client_meal_report_card_keyboard(
             report_id=card.report.id,
             can_reply=card.report.status == "needs_clarification",
+            language_code=language_code,
         ),
     )
 
@@ -157,8 +162,7 @@ async def start_clarification_response_handler(
 
     await callback.answer()
     await callback.message.answer(
-        f"Напишите ответ тренеру по этому отчету.\n\n"
-        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        f"{t('meal_reports.reply_prompt', language_code)}\n\n{t('common.cancel', language_code)} /cancel",
         reply_markup=cancel_keyboard(language_code),
     )
 
@@ -168,6 +172,7 @@ async def process_clarification_response_handler(
     message: Message,
     state: FSMContext,
 ) -> None:
+    language_code = await get_user_language(message.from_user.id)
     response_text = (message.text or "").strip()
 
     data = await state.get_data()
@@ -175,7 +180,7 @@ async def process_clarification_response_handler(
 
     if not report_id:
         await state.clear()
-        await message.answer("Не удалось определить отчет. Откройте отчет заново.")
+        await message.answer(t("meal_reports.report_unknown", language_code))
         return
 
     result = await respond_to_meal_report_clarification(
@@ -186,45 +191,46 @@ async def process_clarification_response_handler(
 
     if not result.ok:
         if result.reason == "response_too_short":
-            await message.answer("Ответ слишком короткий. Напишите минимум 2 символа.")
+            await message.answer(t("meal_reports.short_response", language_code))
             return
 
         if result.reason == "response_too_long":
-            await message.answer("Ответ слишком длинный. Напишите до 1000 символов.")
+            await message.answer(t("meal_reports.long_response", language_code))
             return
 
         await state.clear()
 
         if result.reason == "report_not_waiting_for_clarification":
-            await message.answer("Этот отчет сейчас не ожидает уточнения.")
+            await message.answer(t("meal_reports.not_waiting", language_code))
             return
 
         if result.reason == "report_not_found":
-            await message.answer("Отчет не найден или у вас нет доступа.")
+            await message.answer(t("meal_reports.report_not_found", language_code))
             return
 
         if result.reason == "client_not_found":
-            await message.answer("Не удалось найти активный профиль клиента.")
+            await message.answer(t("meal_reports.client_not_found", language_code))
             return
 
-        await message.answer("Не удалось отправить ответ.")
+        await message.answer(t("meal_reports.send_failed", language_code))
         return
 
     await state.clear()
 
-    await message.answer("Ответ отправлен тренеру. Отчет снова отправлен на проверку.")
+    await message.answer(t("meal_reports.sent", language_code))
 
     if result.coach_telegram_id is not None:
+        coach_language_code = await get_user_language(result.coach_telegram_id)
         await send_logged_message(
             bot=message.bot,
             chat_id=result.coach_telegram_id,
             notification_type="clarification_answered",
             related_entity_type="meal_report",
             related_entity_id=result.report_id,
-            text=(
-                "Клиент ответил на уточнение по отчету еды.\n\n"
-                f"Клиент: {result.client_display_name or 'без имени'}\n"
-                f"Ответ:\n{result.response_text}\n\n"
-                "Откройте раздел “🍽 Отчеты еды”, чтобы проверить отчет снова."
+            text=t(
+                "meal_reports.notification",
+                coach_language_code,
+                client_name=result.client_display_name or t("clients.without_name", coach_language_code),
+                response_text=result.response_text,
             ),
         )

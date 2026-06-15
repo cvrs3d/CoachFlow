@@ -21,15 +21,18 @@ async def client_profile_handler(callback: CallbackQuery) -> None:
 
     client = current.client
     user = current.user
+    display_name = client.display_name or t("profile.display_name_unknown", language_code)
+    goal = client.goal or t("profile.goal_unknown", language_code)
+    status_label = t(f"client_status.{client.status}", language_code)
 
     text = (
         t("profile.title", language_code)
         + "\n\n"
-        + t("profile.name", language_code, display_name=client.display_name or "не указано")
+        + t("profile.name", language_code, display_name=display_name)
         + "\n"
-        + t("profile.goal", language_code, goal=client.goal or "не указана")
+        + t("profile.goal", language_code, goal=goal)
         + "\n"
-        + t("profile.status", language_code, status=client.status)
+        + t("profile.status", language_code, status=status_label)
         + "\n"
         + t("profile.language", language_code, interface_language=user.language_code)
     )

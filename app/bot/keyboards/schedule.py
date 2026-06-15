@@ -51,6 +51,7 @@ def slot_duration_keyboard(language_code: str = "ru") -> InlineKeyboardMarkup:
 def coach_slots_keyboard(
     slots: list[AvailabilitySlot],
     timezone_name: str = "Europe/Prague",
+    language_code: str = "ru",
 ) -> InlineKeyboardMarkup:
     keyboard = []
 
@@ -62,9 +63,9 @@ def coach_slots_keyboard(
         )
 
         status_text = {
-            "available": "свободен",
-            "booked": "занят",
-            "cancelled": "отменен",
+            "available": t("schedule.slot_status_available", language_code),
+            "booked": t("schedule.slot_status_booked", language_code),
+            "cancelled": t("schedule.slot_status_cancelled", language_code),
         }.get(slot.status, slot.status)
 
         keyboard.append(
@@ -145,21 +146,22 @@ def confirm_cancel_booked_slot_keyboard(slot_id: str) -> InlineKeyboardMarkup:
 def slot_date_keyboard(
     timezone_name: str = "Europe/Prague",
     days_count: int = 4,
+    language_code: str = "ru",
 ) -> InlineKeyboardMarkup:
     today = datetime.now(ZoneInfo(timezone_name)).date()
 
     labels = [
-        "Сегодня",
-        "Завтра",
-        "Послезавтра",
-        "+3 дня",
+        t("schedule.today", language_code),
+        t("schedule.tomorrow", language_code),
+        t("schedule.day_after_tomorrow", language_code),
+        t("schedule.in_days", language_code, days=3),
     ]
 
     keyboard = []
 
     for offset in range(days_count):
         target_date = today + timedelta(days=offset)
-        label = labels[offset] if offset < len(labels) else f"+{offset} дней"
+        label = labels[offset] if offset < len(labels) else t("schedule.in_days", language_code, days=offset)
 
         keyboard.append(
             [
@@ -173,7 +175,7 @@ def slot_date_keyboard(
     keyboard.append(
         [
             InlineKeyboardButton(
-                    text=t("schedule.enter_date_manually", "ru"),
+                    text=t("schedule.enter_date_manually", language_code),
                 callback_data="sd:manual",
             )
         ]
@@ -185,6 +187,7 @@ def slot_date_keyboard(
 def slot_time_keyboard(
     start_hour: int = 10,
     end_hour: int = 18,
+    language_code: str = "ru",
 ) -> InlineKeyboardMarkup:
     keyboard = []
 
@@ -210,7 +213,7 @@ def slot_time_keyboard(
     keyboard.append(
         [
             InlineKeyboardButton(
-                text=t("schedule.enter_time_manually", "ru"),
+                text=t("schedule.enter_time_manually", language_code),
                 callback_data="st:manual",
             )
         ]

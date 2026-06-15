@@ -11,35 +11,43 @@ from app.bot.callbacks.meal_reports import (
     ReplyMealReportCallback,
     ReviewMealReportCallback,
 )
+from app.bot.handlers.meal_report_labels import (
+    get_client_report_filter_label,
+    get_coach_report_filter_label,
+    get_meal_type_label,
+    get_report_status_label,
+    get_verdict_label,
+)
+from app.bot.i18n import t
 from app.db.models import Client, MealReport
 
 
-def meal_type_keyboard() -> InlineKeyboardMarkup:
+def meal_type_keyboard(language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Завтрак",
+                    text=t("meal_type.breakfast", language_code),
                     callback_data=MealTypeCallback(meal_type="breakfast").pack(),
                 ),
                 InlineKeyboardButton(
-                    text="Обед",
+                    text=t("meal_type.lunch", language_code),
                     callback_data=MealTypeCallback(meal_type="lunch").pack(),
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="Ужин",
+                    text=t("meal_type.dinner", language_code),
                     callback_data=MealTypeCallback(meal_type="dinner").pack(),
                 ),
                 InlineKeyboardButton(
-                    text="Перекус",
+                    text=t("meal_type.snack", language_code),
                     callback_data=MealTypeCallback(meal_type="snack").pack(),
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="Другое",
+                    text=t("meal_type.other", language_code),
                     callback_data=MealTypeCallback(meal_type="other").pack(),
                 ),
             ],
@@ -63,12 +71,13 @@ MEAL_TYPE_LABELS = {
 
 def pending_meal_reports_keyboard(
     items: list[tuple[MealReport, Client]],
+    language_code: str = "ru",
 ) -> InlineKeyboardMarkup:
     keyboard = []
 
     for report, client in items:
-        client_name = client.display_name or "Без имени"
-        meal_type = MEAL_TYPE_LABELS.get(report.meal_type, report.meal_type)
+        client_name = client.display_name or t("clients.without_name", language_code)
+        meal_type = get_meal_type_label(report.meal_type, language_code)
 
         submitted_at = report.submitted_at
         if isinstance(submitted_at, datetime):
@@ -76,12 +85,7 @@ def pending_meal_reports_keyboard(
         else:
             submitted_text = str(submitted_at)
 
-        status_text = {
-            "submitted": "на проверке",
-            "in_review": "на проверке",
-            "needs_clarification": "нужно уточнение",
-            "reviewed": "проверен",
-        }.get(report.status, report.status)
+        status_text = get_report_status_label(report.status, language_code)
 
         keyboard.append(
             [
@@ -95,7 +99,7 @@ def pending_meal_reports_keyboard(
     keyboard.append(
         [
             InlineKeyboardButton(
-                text="⬅️ К фильтрам",
+                text=t("meal_reports.back_to_filters", language_code),
                 callback_data="mr:filters",
             )
         ]
@@ -104,19 +108,19 @@ def pending_meal_reports_keyboard(
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def meal_review_keyboard(report_id: str) -> InlineKeyboardMarkup:
+def meal_review_keyboard(report_id: str, language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Хорошо",
+                    text=t("meal_reports.review_ok", language_code),
                     callback_data=ReviewMealReportCallback(
                         action="ok",
                         report_id=report_id,
                     ).pack(),
                 ),
                 InlineKeyboardButton(
-                    text="⚠️ Улучшить",
+                    text=t("meal_reports.review_needs_improvement", language_code),
                     callback_data=ReviewMealReportCallback(
                         action="needs_improvement",
                         report_id=report_id,
@@ -125,7 +129,7 @@ def meal_review_keyboard(report_id: str) -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    text="❓ Уточнить",
+                    text=t("meal_reports.review_question", language_code),
                     callback_data=ReviewMealReportCallback(
                         action="question",
                         report_id=report_id,
@@ -134,7 +138,7 @@ def meal_review_keyboard(report_id: str) -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    text="⬅️ К отчетам",
+                    text=t("meal_reports.back_to_reports", language_code),
                     callback_data="mr:list",
                 ),
             ],
@@ -148,11 +152,12 @@ def meal_review_keyboard(report_id: str) -> InlineKeyboardMarkup:
 
 def client_meal_reports_keyboard(
     reports: list[MealReport],
+    language_code: str = "ru",
 ) -> InlineKeyboardMarkup:
     keyboard = []
 
     for report in reports:
-        meal_type = MEAL_TYPE_LABELS.get(report.meal_type, report.meal_type)
+        meal_type = get_meal_type_label(report.meal_type, language_code)
 
         submitted_at = report.submitted_at
         if isinstance(submitted_at, datetime):
@@ -160,14 +165,7 @@ def client_meal_reports_keyboard(
         else:
             submitted_text = str(submitted_at)
 
-        status_text = {
-            "submitted": "на проверке",
-            "in_review": "на проверке",
-            "reviewed": "проверен",
-            "needs_clarification": "нужно уточнение",
-            "archived": "архив",
-            "draft": "черновик",
-        }.get(report.status, report.status)
+        status_text = get_report_status_label(report.status, language_code)
 
         keyboard.append(
             [
@@ -181,7 +179,7 @@ def client_meal_reports_keyboard(
     keyboard.append(
         [
             InlineKeyboardButton(
-                text="⬅️ К фильтрам",
+                text=t("meal_reports.back_to_filters", language_code),
                 callback_data="mr:cfilters",
             )
         ]
@@ -193,6 +191,7 @@ def client_meal_reports_keyboard(
 def client_meal_report_card_keyboard(
     report_id: str | None = None,
     can_reply: bool = False,
+    language_code: str = "ru",
 ) -> InlineKeyboardMarkup:
     keyboard = []
 
@@ -200,7 +199,7 @@ def client_meal_report_card_keyboard(
         keyboard.append(
             [
                 InlineKeyboardButton(
-                    text="✍️ Ответить тренеру",
+                    text=t("meal_reports.reply_to_coach", language_code),
                     callback_data=ReplyMealReportCallback(report_id=report_id).pack(),
                 )
             ]
@@ -209,7 +208,7 @@ def client_meal_report_card_keyboard(
     keyboard.append(
         [
             InlineKeyboardButton(
-                text="⬅️ К моим отчетам",
+                    text=t("meal_reports.back_to_my_reports", language_code),
                 callback_data="mr:cfilters",
             )
         ]
@@ -218,18 +217,18 @@ def client_meal_report_card_keyboard(
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def coach_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
+def coach_meal_reports_filter_keyboard(language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🟡 На проверку",
+                    text=t("coach_report_filter.pending", language_code),
                     callback_data=CoachMealReportFilterCallback(report_filter="pending").pack(),
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="❓ Нужно уточнение",
+                    text=t("coach_report_filter.clarification", language_code),
                     callback_data=CoachMealReportFilterCallback(
                         report_filter="clarification"
                     ).pack(),
@@ -237,7 +236,7 @@ def coach_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    text="✅ Проверенные",
+                    text=t("coach_report_filter.reviewed", language_code),
                     callback_data=CoachMealReportFilterCallback(report_filter="reviewed").pack(),
                 )
             ],
@@ -248,11 +247,12 @@ def coach_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
 def coach_client_meal_reports_keyboard(
     items: list[tuple[MealReport, Client]],
     client_id: str,
+    language_code: str = "ru",
 ) -> InlineKeyboardMarkup:
     keyboard = []
 
     for report, _client in items:
-        meal_type = MEAL_TYPE_LABELS.get(report.meal_type, report.meal_type)
+        meal_type = get_meal_type_label(report.meal_type, language_code)
 
         submitted_at = report.submitted_at
         if isinstance(submitted_at, datetime):
@@ -260,14 +260,7 @@ def coach_client_meal_reports_keyboard(
         else:
             submitted_text = str(submitted_at)
 
-        status_text = {
-            "draft": "черновик",
-            "submitted": "на проверке",
-            "in_review": "на проверке",
-            "reviewed": "проверен",
-            "needs_clarification": "нужно уточнение",
-            "archived": "архив",
-        }.get(report.status, report.status)
+        status_text = get_report_status_label(report.status, language_code)
 
         keyboard.append(
             [
@@ -281,7 +274,7 @@ def coach_client_meal_reports_keyboard(
     keyboard.append(
         [
             InlineKeyboardButton(
-                text="⬅️ К карточке клиента",
+                text=t("clients.back_to_card", language_code),
                 callback_data=f"client:open:{client_id}",
             )
         ]
@@ -290,30 +283,30 @@ def coach_client_meal_reports_keyboard(
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def client_meal_reports_filter_keyboard() -> InlineKeyboardMarkup:
+def client_meal_reports_filter_keyboard(language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="📚 Все",
+                    text=t("client_report_filter.all", language_code),
                     callback_data=ClientMealReportFilterCallback(report_filter="all").pack(),
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🟡 На проверке",
+                    text=t("client_report_filter.pending", language_code),
                     callback_data=ClientMealReportFilterCallback(report_filter="pending").pack(),
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="✅ Проверенные",
+                    text=t("client_report_filter.reviewed", language_code),
                     callback_data=ClientMealReportFilterCallback(report_filter="reviewed").pack(),
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="❓ Нужно уточнение",
+                    text=t("client_report_filter.clarification", language_code),
                     callback_data=ClientMealReportFilterCallback(
                         report_filter="clarification"
                     ).pack(),

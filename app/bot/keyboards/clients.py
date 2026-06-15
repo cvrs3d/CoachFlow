@@ -1,14 +1,15 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from app.bot.i18n import t
 from app.db.models import Client
 
 
-def client_appointments_keyboard(client_id: str) -> InlineKeyboardMarkup:
+def client_appointments_keyboard(client_id: str, language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="⬅️ К карточке клиента",
+                    text=t("clients.back_to_card", language_code),
                     callback_data=f"client:open:{client_id}",
                 )
             ]
@@ -16,11 +17,11 @@ def client_appointments_keyboard(client_id: str) -> InlineKeyboardMarkup:
     )
 
 
-def clients_list_keyboard(clients: list[Client]) -> InlineKeyboardMarkup:
+def clients_list_keyboard(clients: list[Client], language_code: str = "ru") -> InlineKeyboardMarkup:
     keyboard = []
 
     for client in clients:
-        name = client.display_name or "Без имени"
+        name = client.display_name or t("clients.without_name", language_code)
 
         keyboard.append(
             [
@@ -34,34 +35,34 @@ def clients_list_keyboard(clients: list[Client]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def client_card_keyboard(client_id: str) -> InlineKeyboardMarkup:
+def client_card_keyboard(client_id: str, language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="📅 Записи",
+                    text=t("clients.bookings", language_code),
                     callback_data=f"cc:bookings:{client_id}",
                 ),
                 InlineKeyboardButton(
-                    text="🍽 Отчеты еды",
+                    text=t("clients.meal_reports", language_code),
                     callback_data=f"cc:meals:{client_id}",
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="✏️ Изменить имя",
+                    text=t("clients.edit_name", language_code),
                     callback_data=f"client:edit_name:{client_id}",
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="🚫 Деактивировать",
+                    text=t("clients.deactivate", language_code),
                     callback_data=f"client:delete:{client_id}",
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="⬅️ К клиентам",
+                    text=t("clients.back_to_clients", language_code),
                     callback_data="clients:list",
                 ),
             ],
@@ -69,18 +70,18 @@ def client_card_keyboard(client_id: str) -> InlineKeyboardMarkup:
     )
 
 
-def confirm_delete_client_keyboard(client_id: str) -> InlineKeyboardMarkup:
+def confirm_delete_client_keyboard(client_id: str, language_code: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Да, удалить",
+                    text=t("clients.confirm_delete", language_code),
                     callback_data=f"client:delete:{client_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="⬅️ Назад",
+                    text=t("clients.back", language_code),
                     callback_data=f"client:open:{client_id}",
                 )
             ],

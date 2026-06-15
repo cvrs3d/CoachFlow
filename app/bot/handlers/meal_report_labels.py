@@ -1,35 +1,21 @@
-COACH_REPORT_FILTER_LABELS = {
-    "pending": "Отчеты на проверку",
-    "clarification": "Отчеты, ожидающие уточнения клиента",
-    "reviewed": "Проверенные отчеты",
-}
+from app.bot.i18n import t
 
-MEAL_TYPE_LABELS = {
-    "breakfast": "Завтрак",
-    "lunch": "Обед",
-    "dinner": "Ужин",
-    "snack": "Перекус",
-    "other": "Другое",
-}
 
-CLIENT_REPORT_FILTER_LABELS = {
-    "all": "Все отчеты еды",
-    "pending": "Отчеты на проверке",
-    "reviewed": "Проверенные отчеты",
-    "clarification": "Отчеты, где нужно уточнение",
-}
+def get_meal_type_label(meal_type: str, language_code: str) -> str:
+    return t(f"meal_type.{meal_type}", language_code)
 
-VERDICT_LABELS = {
-    "ok": "Хорошо ✅",
-    "needs_improvement": "Нужно улучшить ⚠️",
-    "question": "Нужно уточнение ❓",
-}
 
-REPORT_STATUS_LABELS = {
-    "draft": "Черновик",
-    "submitted": "На проверке",
-    "in_review": "На проверке",
-    "reviewed": "Проверен",
-    "needs_clarification": "Нужно уточнение",
-    "archived": "Архив",
-}
+def get_report_status_label(status: str, language_code: str) -> str:
+    return t(f"report_status.{status}", language_code)
+
+
+def get_verdict_label(verdict: str, language_code: str) -> str:
+    return t(f"verdict.{verdict}", language_code)
+
+
+def get_coach_report_filter_label(report_filter: str, language_code: str) -> str:
+    return t(f"coach_report_filter.{report_filter}", language_code)
+
+
+def get_client_report_filter_label(report_filter: str, language_code: str) -> str:
+    return t(f"client_report_filter.{report_filter}", language_code)

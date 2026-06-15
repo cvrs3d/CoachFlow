@@ -42,6 +42,7 @@ APPOINTMENT_STATUS_LABELS = {
 
 @router.callback_query(F.data.startswith("cc:bookings:"))
 async def client_card_bookings_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     client_id = callback.data.split(":", 2)[2]
 
     result = await list_client_appointments_for_coach(
@@ -66,13 +67,14 @@ async def client_card_bookings_handler(callback: CallbackQuery) -> None:
         return
 
     await callback.message.answer(
-        format_client_appointments_text(result),
-        reply_markup=client_appointments_keyboard(client_id),
+        format_client_appointments_text(result, language_code),
+        reply_markup=client_appointments_keyboard(client_id, language_code),
     )
 
 
 @router.callback_query(F.data.startswith("cc:meals:"))
 async def client_card_meal_reports_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     client_id = callback.data.split(":", 2)[2]
 
     reports = await list_meal_reports_for_coach_client(
@@ -94,12 +96,14 @@ async def client_card_meal_reports_handler(callback: CallbackQuery) -> None:
         reply_markup=coach_client_meal_reports_keyboard(
             reports,
             client_id=client_id,
+            language_code=language_code,
         ),
     )
 
 
 @router.callback_query(MainMenuCallback.filter(F.action == "coach_clients"))
 async def clients_menu_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     await callback.answer()
     clients = await list_clients_for_coach(callback.from_user.id)
     if not clients:
@@ -108,12 +112,13 @@ async def clients_menu_handler(callback: CallbackQuery) -> None:
 
     await callback.message.answer(
         t("clients.title", language_code),
-        reply_markup=clients_list_keyboard(clients),
+        reply_markup=clients_list_keyboard(clients, language_code),
     )
 
 
 @router.callback_query(F.data == "client:list")
 async def clients_list_callback_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     clients = await list_clients_for_coach(callback.from_user.id)
 
     await callback.answer()
@@ -125,12 +130,13 @@ async def clients_list_callback_handler(callback: CallbackQuery) -> None:
     await safe_answer_or_edit_text(
         callback.message,
         t("clients.title", language_code),
-        reply_markup=clients_list_keyboard(clients),
+        reply_markup=clients_list_keyboard(clients, language_code),
     )
 
 
 @router.callback_query(F.data.startswith("client:open:"))
 async def open_client_card_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     client_id = callback.data.split(":", 2)[2]
 
     result = await get_client_card_for_coach(
@@ -145,8 +151,8 @@ async def open_client_card_handler(callback: CallbackQuery) -> None:
         return
 
     await callback.message.answer(
-        format_client_card_text(result),
-        reply_markup=client_card_keyboard(client_id),
+        format_client_card_text(result, language_code),
+        reply_markup=client_card_keyboard(client_id, language_code),
     )
 
 
@@ -173,8 +179,8 @@ async def edit_client_name_start_handler(
     await state.update_data(client_id=client_id)
 
     await callback.message.answer(
-        f"Введите новое имя клиента.\n\nТекущее имя: {current_name or 'не указано'}\n\n"
-        f"Если хотите отменить действие, нажмите {t('common.cancel', language_code)} или используйте /cancel.",
+        f"{t('clients.edit_name_prompt', language_code, current_name=current_name or t('clients.without_name', language_code))}\n\n"
+        f"{t('common.cancel', language_code)} /cancel",
         reply_markup=cancel_keyboard(language_code),
     )
 
@@ -262,7 +268,7 @@ async def confirm_delete_client_handler(callback: CallbackQuery) -> None:
             language_code,
             client_name=card.client.display_name or t("clients.without_name", language_code),
         ),
-        reply_markup=confirm_delete_client_keyboard(client_id),
+        reply_markup=confirm_delete_client_keyboard(client_id, language_code),
     )
 
 
@@ -290,5 +296,5 @@ async def delete_client_handler(callback: CallbackQuery) -> None:
     await safe_answer_or_edit_text(
         callback.message,
         t("clients.deleted", language_code),
-        reply_markup=clients_list_keyboard(clients),
+        reply_markup=clients_list_keyboard(clients, language_code),
     )
