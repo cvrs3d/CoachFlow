@@ -80,10 +80,14 @@ TEXTS = {
 }
 
 
-def t(key: str, language_code: str | None = None) -> str:
+def t(key: str, language_code: str | None = None, **kwargs) -> str:
     language = language_code if language_code in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
-    return TEXTS[language].get(key, TEXTS[DEFAULT_LANGUAGE].get(key, key))
+    template = TEXTS[language].get(key, TEXTS[DEFAULT_LANGUAGE].get(key, key))
 
+    if kwargs:
+        return template.format(**kwargs)
+
+    return template
 
 async def get_user_language(
     telegram_id: int,
