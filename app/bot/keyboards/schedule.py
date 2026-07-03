@@ -80,18 +80,21 @@ def coach_slots_keyboard(
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def available_slot_management_keyboard(slot_id: str) -> InlineKeyboardMarkup:
+def available_slot_management_keyboard(
+    slot_id: str,
+    language_code: str = "ru",
+) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=t("schedule.delete_available_slot", "ru"),
+                    text=t("schedule.delete_available_slot", language_code),
                     callback_data=f"schedule:delete_available:{slot_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text=t("common.back", "ru"),
+                    text=t("common.back", language_code),
                     callback_data="schedule:list_slots",
                 )
             ],
@@ -99,43 +102,48 @@ def available_slot_management_keyboard(slot_id: str) -> InlineKeyboardMarkup:
     )
 
 
-def booked_slot_management_keyboard(slot_id: str) -> InlineKeyboardMarkup:
+def booked_slot_management_keyboard(
+    slot_id: str,
+    language_code: str = "ru",
+) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=t("schedule.cancel_booked_slot", "ru"),
+                    text=t("schedule.cancel_booked_slot", language_code),
                     callback_data=f"sc:cb:{slot_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text=t("schedule.add_to_calendar", "ru"),
+                    text=t("schedule.add_to_calendar", language_code),
                     callback_data=f"sc:ics:{slot_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text=t("common.back", "ru"),
+                    text=t("common.back", language_code),
                     callback_data="schedule:list_slots",
                 )
             ],
         ]
     )
 
-
-def confirm_cancel_booked_slot_keyboard(slot_id: str) -> InlineKeyboardMarkup:
+def confirm_cancel_booked_slot_keyboard(
+    slot_id: str,
+    language_code: str = "ru",
+) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=t("schedule.confirm_cancel", "ru"),
+                    text=t("schedule.confirm_cancel", language_code),
                     callback_data=f"sc:ccb:{slot_id}",
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text=t("common.back", "ru"),
+                    text=t("common.back", language_code),
                     callback_data=f"schedule:open_slot:{slot_id}",
                 )
             ],

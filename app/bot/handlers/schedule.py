@@ -216,6 +216,7 @@ async def process_slot_duration_handler(
     callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     coach = await get_coach_by_telegram_id(callback.from_user.id)
 
     if coach is None:
@@ -266,6 +267,7 @@ async def process_slot_duration_handler(
 
 @router.callback_query(F.data == "schedule:list_slots")
 async def list_slots_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     coach = await get_coach_by_telegram_id(callback.from_user.id)
 
     if coach is None:
@@ -291,6 +293,7 @@ async def list_slots_handler(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith("schedule:open_slot:"))
 async def open_slot_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     slot_id = callback.data.split(":", 2)[2]
 
     card = await get_slot_card_for_coach(
@@ -321,12 +324,12 @@ async def open_slot_handler(callback: CallbackQuery) -> None:
 
         await callback.message.edit_text(
             text,
-            reply_markup=available_slot_management_keyboard(slot.id),
+            reply_markup=available_slot_management_keyboard(slot.id, language_code),
         )
         return
 
     if slot.status == "booked":
-        client_name = "неизвестный клиент"
+        client_name = t("clients.unknown_client", language_code)
 
         if card.client is not None:
             client_name = card.client.display_name or t("clients.without_name", language_code)
@@ -337,7 +340,7 @@ async def open_slot_handler(callback: CallbackQuery) -> None:
 
         await callback.message.edit_text(
             text,
-            reply_markup=booked_slot_management_keyboard(slot.id),
+            reply_markup=booked_slot_management_keyboard(slot.id, language_code),
         )
         return
 
@@ -346,6 +349,7 @@ async def open_slot_handler(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith("schedule:delete_available:"))
 async def delete_available_slot_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     slot_id = callback.data.split(":", 2)[2]
 
     ok = await delete_available_slot_for_coach(
@@ -383,6 +387,7 @@ async def delete_available_slot_handler(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith("sc:cb:"))
 async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     slot_id = callback.data.split(":", 2)[2]
 
     card = await get_slot_card_for_coach(
@@ -396,7 +401,7 @@ async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
         await callback.message.edit_text(t("schedule.cancel_booking_not_found", language_code))
         return
 
-    client_name = "неизвестный клиент"
+    client_name = t("clients.unknown_client", language_code)
 
     if card.client is not None:
         client_name = card.client.display_name or t("clients.without_name", language_code)
@@ -418,12 +423,13 @@ async def cancel_booked_slot_confirm_handler(callback: CallbackQuery) -> None:
             slot_time=slot_time,
             timezone_name=timezone_name,
         ),
-        reply_markup=confirm_cancel_booked_slot_keyboard(slot_id),
+        reply_markup=confirm_cancel_booked_slot_keyboard(slot_id, language_code),
     )
 
 
 @router.callback_query(F.data.startswith("sc:ccb:"))
 async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     slot_id = callback.data.split(":", 2)[2]
 
     result = await cancel_booked_slot_for_coach(
@@ -478,6 +484,7 @@ async def cancel_booked_slot_handler(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "schedule:ics")
 async def download_coach_future_bookings_ics_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     result = await build_coach_future_bookings_ics(
         telegram_id=callback.from_user.id,
     )
@@ -499,6 +506,7 @@ async def download_coach_future_bookings_ics_handler(callback: CallbackQuery) ->
 
 @router.callback_query(F.data.startswith("sc:ics:"))
 async def download_coach_slot_appointment_ics_handler(callback: CallbackQuery) -> None:
+    language_code = await get_user_language(callback.from_user.id)
     slot_id = callback.data.split(":", 2)[2]
 
     result = await build_coach_slot_appointment_ics(

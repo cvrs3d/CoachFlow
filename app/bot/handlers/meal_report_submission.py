@@ -6,7 +6,7 @@ from app.bot.callbacks.meal_reports import MealTypeCallback
 from app.bot.callbacks.menu import MainMenuCallback
 from app.bot.i18n import get_user_language, t
 from app.bot.keyboards.common import cancel_keyboard
-from app.bot.handlers.meal_report_labels import MEAL_TYPE_LABELS
+from app.bot.handlers.meal_report_labels import get_meal_type_label
 from app.bot.keyboards.meal_reports import meal_type_keyboard
 from app.bot.states.meal_reports import MealReportStates
 from app.bot.utils.safe_messages import safe_edit_text
