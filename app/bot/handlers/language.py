@@ -1,5 +1,5 @@
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from app.bot.i18n import get_user_language, t
 from app.bot.keyboards.language import language_keyboard
@@ -42,7 +42,23 @@ async def set_language_handler(callback: CallbackQuery) -> None:
     else:
         reply_markup = client_main_menu(result.language_code)
 
+    await callback.message.edit_text(
+        t("language.updated", result.language_code)
+    )
+
     await callback.message.answer(
-        t("language.updated", result.language_code),
+        t("common.reply_keyboard_removed", result.language_code),
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    if result.role == "coach":
+        reply_markup = coach_main_menu(result.language_code)
+        title = t("menu.coach.title", result.language_code)
+    else:
+        reply_markup = client_main_menu(result.language_code)
+        title = t("menu.client.title", result.language_code)
+
+    await callback.message.answer(
+        title,
         reply_markup=reply_markup,
     )

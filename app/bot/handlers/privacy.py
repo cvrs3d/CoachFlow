@@ -1,5 +1,5 @@
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.filters import Command
 
 from app.bot.keyboards.main_menu import client_main_menu
@@ -91,10 +91,14 @@ async def accept_privacy_handler(callback: CallbackQuery) -> None:
     )
 
     await callback.message.answer(
+        t("common.reply_keyboard_removed", language_code),
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    await callback.message.answer(
         t("privacy.client_menu", language_code),
         reply_markup=client_main_menu(language_code),
     )
-
 
 @router.callback_query(F.data == "privacy:decline")
 async def decline_privacy_handler(callback: CallbackQuery) -> None:

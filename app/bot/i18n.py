@@ -9,6 +9,7 @@ DEFAULT_LANGUAGE = "ru"
 
 TEXTS = {
     "ru": {
+        "common.reply_keyboard_removed": "Старое меню под строкой ввода скрыто.",
         "meal_reports.choose_meal_type": "Выберите прием пищи:",
         "meal_reports.unknown_meal_type": "Неизвестный тип приема пищи.",
         "meal_reports.meal_type_selected": "Выбран прием пищи: {meal_type_label}",
@@ -321,6 +322,7 @@ TEXTS = {
         "meal_reports.reviewed_client_with_comment": "Тренер проверил ваш отчет еды.\n\nРезультат: {verdict_label}\n\nКомментарий тренера:\n{comment}",
     },
     "en": {
+        "common.reply_keyboard_removed": "The old input menu has been hidden.",
         "meal_reports.choose_meal_type": "Choose meal type:",
         "meal_reports.unknown_meal_type": "Unknown meal type.",
         "meal_reports.meal_type_selected": "Selected meal type: {meal_type_label}",
@@ -633,6 +635,7 @@ TEXTS = {
         "meal_reports.reviewed_client_with_comment": "The coach reviewed your meal report.\n\nResult: {verdict_label}\n\nCoach comment:\n{comment}",
     },
     "cs": {
+        "common.reply_keyboard_removed": "Staré menu pod vstupním polem bylo skryto.",
         "meal_reports.choose_meal_type": "Выберите прием пищи:",
         "meal_reports.unknown_meal_type": "Неизвестный тип приема пищи.",
         "meal_reports.meal_type_selected": "Выбран прием пищи: {meal_type_label}",

@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.filters import Command, CommandStart
 from aiogram.filters.command import CommandObject
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardRemove
 
 from app.bot.i18n import get_user_language, t
 from app.bot.keyboards.common import cancel_keyboard
@@ -27,6 +27,10 @@ async def start_handler(
     # 1. Trainer panel
     if current and current.coach and current.user.status == "active":
         await message.answer(
+            t("common.reply_keyboard_removed", language_code),
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        await message.answer(
             t("menu.coach.title", language_code),
             reply_markup=coach_main_menu(language_code),
         )
@@ -34,6 +38,10 @@ async def start_handler(
 
     # 2. Active clients panel
     if current and current.client and current.user.status == "active":
+        await message.answer(
+            t("common.reply_keyboard_removed", language_code),
+            reply_markup=ReplyKeyboardRemove(),
+        )
         await message.answer(
             t("menu.client.title", language_code),
             reply_markup=client_main_menu(language_code),
