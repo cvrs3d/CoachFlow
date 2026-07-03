@@ -40,9 +40,16 @@ async def choose_meal_type_handler(
     meal_type = callback_data.meal_type
     language_code = await get_user_language(callback.from_user.id)
 
-    if meal_type not in MEAL_TYPE_LABELS:
-        await callback.answer(t("meal_reports.unknown_meal_type", language_code), show_alert=True)
+    allowed_meal_types = {"breakfast", "lunch", "dinner", "snack", "other"}
+
+    if meal_type not in allowed_meal_types:
+        await callback.answer(
+            t("meal_reports.unknown_meal_type", language_code),
+            show_alert=True,
+        )
         return
+
+    meal_type_label = get_meal_type_label(meal_type, language_code)
 
     await state.update_data(meal_type=meal_type)
     await state.set_state(MealReportStates.waiting_for_photo)
@@ -52,18 +59,18 @@ async def choose_meal_type_handler(
     await safe_edit_text(
         callback.message,
         text=(
-            f"{t('meal_reports.meal_type_selected', language_code, meal_type_label=MEAL_TYPE_LABELS[meal_type])}\n\n"
+            f"{t('meal_reports.meal_type_selected', language_code, meal_type_label=meal_type_label)}\n\n"
             f"{t('meal_reports.send_photo_prompt', language_code)}"
         ),
         reply_markup=cancel_keyboard(language_code),
     )
-
 
 @router.message(MealReportStates.waiting_for_photo, F.photo)
 async def process_meal_photo_handler(
     message: Message,
     state: FSMContext,
 ) -> None:
+    language_code = await get_user_language(message.from_user.id)
     data = await state.get_data()
     meal_type = data.get("meal_type")
 
@@ -101,9 +108,9 @@ async def process_meal_photo_handler(
 
     if result.coach_telegram_id is not None:
         coach_language_code = await get_user_language(result.coach_telegram_id)
-        meal_type_label = MEAL_TYPE_LABELS.get(
-            result.meal_type or "",
-            result.meal_type or t("clients.without_name", coach_language_code),
+        meal_type_label = get_meal_type_label(
+            result.meal_type or "other",
+            coach_language_code,
         )
 
         await send_logged_message(

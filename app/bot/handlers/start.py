@@ -117,4 +117,7 @@ async def health_handler(message: Message) -> None:
 
 @router.message(Command("myid"))
 async def myid_handler(message: Message) -> None:
-    await message.answer(f"Ваш Telegram ID: {message.from_user.id}")
+    language_code = await get_user_language(message.from_user.id)
+    await message.answer(
+        t("start.myid", language_code, telegram_id=message.from_user.id)
+    )
