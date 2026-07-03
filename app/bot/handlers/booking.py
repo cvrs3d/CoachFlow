@@ -27,16 +27,20 @@ async def choose_time_handler(callback: CallbackQuery) -> None:
     await callback.answer()
 
     if context is None:
-        await callback.message.answer("Не удалось найти активный профиль клиента.")
+        await callback.message.answer(
+            t("booking.no_active_client", language_code)
+        )
         return
 
     slots = await list_available_slots_for_client(
-        telegram_id=callback.message.from_user.id,
+        telegram_id=callback.from_user.id,
         limit=10,
     )
 
     if not slots:
-        await callback.message.answer("Сейчас нет доступных слотов для записи.")
+        await callback.message.answer(
+            t("booking.no_slots", language_code)
+        )
         return
 
     await callback.message.answer(
@@ -82,7 +86,12 @@ async def book_slot_handler(callback: CallbackQuery) -> None:
         )
 
         await callback.message.edit_text(
-            await callback.message.edit_text(t("booking.confirmed", language_code, slot_time=slot_time, timezone_name=timezone_name))
+            t(
+                "booking.confirmed",
+                language_code,
+                slot_time=slot_time,
+                timezone_name=timezone_name,
+            )
         )
 
         ics_result = await build_client_appointment_ics(

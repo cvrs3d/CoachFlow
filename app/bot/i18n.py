@@ -9,6 +9,10 @@ DEFAULT_LANGUAGE = "ru"
 
 TEXTS = {
     "ru": {
+        "language.update_failed": "Language update failed",
+        "start.myid": "Ваш Telegram ID: {telegram_id}",
+        "schedule.client_cancel_notification": "Тренер отменил занятие.\n\nВремя: {slot_time}\nЧасовой пояс: {timezone_name}",
+        "clients.unknown_client": "неизвестный клиент",
         "common.reply_keyboard_removed": "Старое меню под строкой ввода скрыто.",
         "meal_reports.choose_meal_type": "Выберите прием пищи:",
         "meal_reports.unknown_meal_type": "Неизвестный тип приема пищи.",
@@ -322,6 +326,10 @@ TEXTS = {
         "meal_reports.reviewed_client_with_comment": "Тренер проверил ваш отчет еды.\n\nРезультат: {verdict_label}\n\nКомментарий тренера:\n{comment}",
     },
     "en": {
+        "language.update_failed": "Language update failed",
+        "clients.unknown_client": "unknown client",
+        "schedule.client_cancel_notification": "The coach cancelled the session.\n\nTime: {slot_time}\nTimezone: {timezone_name}",
+        "start.myid": "Your Telegram ID: {telegram_id}",
         "common.reply_keyboard_removed": "The old input menu has been hidden.",
         "meal_reports.choose_meal_type": "Choose meal type:",
         "meal_reports.unknown_meal_type": "Unknown meal type.",
@@ -635,6 +643,10 @@ TEXTS = {
         "meal_reports.reviewed_client_with_comment": "The coach reviewed your meal report.\n\nResult: {verdict_label}\n\nCoach comment:\n{comment}",
     },
     "cs": {
+        "language.update_failed": "Language update failed",
+        "start.myid": "Vaše Telegram ID: {telegram_id}",
+        "schedule.client_cancel_notification": "Trenér zrušil lekci.\n\nČas: {slot_time}\nČasové pásmo: {timezone_name}",
+        "clients.unknown_client": "neznámý klient",
         "common.reply_keyboard_removed": "Staré menu pod vstupním polem bylo skryto.",
         "meal_reports.choose_meal_type": "Выберите прием пищи:",
         "meal_reports.unknown_meal_type": "Неизвестный тип приема пищи.",

@@ -24,23 +24,18 @@ async def language_menu_handler(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith("lang:set:"))
 async def set_language_handler(callback: CallbackQuery) -> None:
-    language_code = callback.data.split(":")[-1]
+    selected_language_code = callback.data.split(":")[-1]
 
     result = await set_user_language(
         telegram_id=callback.from_user.id,
-        language_code=language_code,
+        language_code=selected_language_code,
     )
 
     await callback.answer()
 
     if not result.ok or result.language_code is None:
-        await callback.message.answer("Could not update language.")
+        await callback.message.answer(t("language.update_failed", "ru"))
         return
-
-    if result.role == "coach":
-        reply_markup = coach_main_menu(result.language_code)
-    else:
-        reply_markup = client_main_menu(result.language_code)
 
     await callback.message.edit_text(
         t("language.updated", result.language_code)
